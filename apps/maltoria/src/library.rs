@@ -6,8 +6,9 @@
 
 use std::cmp::Ordering;
 
+use iced::time::{Duration, Instant};
 use iced::widget::{Column, Row, Space, Stack, container, mouse_area, scrollable, sensor, text};
-use iced::{Alignment, Length};
+use iced::{Alignment, Length, Padding};
 use maltoria_core::i18n::s;
 use maltoria_core::library_view::{matches_query, natural_cmp};
 use maltoria_core::model::{Game, format_play_time};
@@ -163,9 +164,9 @@ pub struct State {
     /// background and cropped from the top, so that a figure fills its cell
     /// with its face in view.
     pub pictures: image::Cache<String>,
-    /// The loading indicator in place of the sync button, while a metadata
-    /// sync runs.
-    pub syncing: Option<progress_bar::IndeterminateState>,
+    /// The refresh indicator over the library, while a metadata sync runs
+    /// and as it goes away.
+    pub syncing: Option<Syncing>,
 }
 
 impl Default for State {
@@ -233,23 +234,102 @@ pub fn action_message(action: Option<RuntimeAction>, game: &Game) -> Option<Mess
     })
 }
 
-/// The sync button, or while a sync runs a loading indicator of its size.
-fn sync_button<'a>(
-    syncing: Option<&progress_bar::IndeterminateState>,
-) -> material::Element<'a, Message> {
-    let side = tokens::component::icon_button::CONTAINER_WIDTH;
+/// How long the refresh indicator grows in: SwipeRefreshLayout's
+/// `config_mediumAnimTime`.
+const SYNC_SCALE_UP: Duration = Duration::from_millis(400);
+/// How long it shrinks away: SwipeRefreshLayout's `SCALE_DOWN_DURATION`.
+const SYNC_SCALE_DOWN: Duration = Duration::from_millis(150);
+/// The gap between the indicator and the top of the games.
+const SYNC_INDICATOR_TOP: f32 = 16.0;
 
-    match syncing {
-        Some(animation) => progress_bar::loading(
-            progress_bar::LoadingIndicatorMode::indeterminate(animation.loading_phase()),
-        )
+/// Android's refresh indicator while metadata syncs: it grows in at the top
+/// of the games, spins until the sync ends, and shrinks away.
+#[derive(Debug, Clone)]
+pub struct Syncing {
+    animation: progress_bar::IndeterminateState,
+    running: bool,
+    /// The scale the current growing or shrinking started from, and when.
+    from: f32,
+    since: Instant,
+    scale: f32,
+}
+
+impl Syncing {
+    pub fn new(now: Instant) -> Self {
+        Self {
+            animation: progress_bar::IndeterminateState::new(now),
+            running: true,
+            from: 0.0,
+            since: now,
+            scale: 0.0,
+        }
+    }
+
+    /// A sync started again, perhaps while the indicator was going away.
+    pub fn start(&mut self, now: Instant) {
+        if !self.running {
+            self.running = true;
+            self.from = self.scale;
+            self.since = now;
+        }
+    }
+
+    /// The sync ended: the indicator shrinks away from where it is.
+    pub fn finish(&mut self, now: Instant) {
+        if self.running {
+            self.running = false;
+            self.from = self.scale;
+            self.since = now;
+        }
+    }
+
+    pub fn is_running(&self) -> bool {
+        self.running
+    }
+
+    /// Moves the indicator to `now`; false once it is gone.
+    pub fn advance(&mut self, now: Instant) -> bool {
+        self.animation.advance(now);
+
+        let (target, duration) = if self.running {
+            (1.0, SYNC_SCALE_UP)
+        } else {
+            (0.0, SYNC_SCALE_DOWN)
+        };
+        let progress = (now.saturating_duration_since(self.since).as_secs_f32()
+            / duration.as_secs_f32())
+        .min(1.0);
+        // Android's DecelerateInterpolator.
+        let eased = 1.0 - (1.0 - progress).powi(2);
+        self.scale = self.from + (target - self.from) * eased;
+
+        self.running || progress < 1.0
+    }
+}
+
+/// The refresh indicator at its current size, centred at the top.
+fn sync_indicator<'a>(syncing: &Syncing) -> material::Element<'a, Message> {
+    let full = tokens::component::loading_indicator::CONTAINER_WIDTH;
+    let side = full * syncing.scale;
+
+    let indicator: material::Element<'a, Message> = if side < 1.0 {
+        Space::new().into()
+    } else {
+        progress_bar::loading(progress_bar::LoadingIndicatorMode::contained_indeterminate(
+            syncing.animation.loading_phase(),
+        ))
         .width(Length::Fixed(side))
         .height(Length::Fixed(side))
-        .into(),
-        None => button::icon_button("sync", IconButtonVariant::Standard)
-            .on_press(Message::SyncMetadata)
-            .into(),
-    }
+        .into()
+    };
+
+    container(indicator)
+        .width(Length::Fill)
+        .height(Length::Fixed(full))
+        .align_x(Alignment::Center)
+        .align_y(Alignment::Center)
+        .padding(Padding::ZERO.top(SYNC_INDICATOR_TOP))
+        .into()
 }
 
 pub fn view<'a>(
@@ -268,7 +348,15 @@ pub fn view<'a>(
             select::outlined(Sort::ALL, Some(state.sort), Message::Sort)
                 .width(Length::Fixed(160.0)),
         )
-        .push(sync_button(state.syncing.as_ref()))
+        .push(
+            button::icon_button("sync", IconButtonVariant::Standard).on_press_maybe(
+                state
+                    .syncing
+                    .as_ref()
+                    .is_none_or(|syncing| !syncing.is_running())
+                    .then_some(Message::SyncMetadata),
+            ),
+        )
         .push(
             button::extended_fab_with_icon("add", s().app.add_game, button::FabVariant::Primary)
                 .on_press(Message::AddProgram),
@@ -310,17 +398,35 @@ pub fn view<'a>(
         .into()
     };
 
-    let library = Column::new()
+    // The search and filters stay put; the games scroll beneath them, with
+    // the refresh indicator over their top.
+    let header = Column::new()
         .push(toolbar)
         .push(filters)
-        .push(body)
         .spacing(20)
-        .padding(24)
-        .width(Length::Fill);
+        .padding(Padding::new(24.0).bottom(0.0));
 
-    scrollable(library)
-        .height(Length::Fill)
+    let games = scrollable(
+        container(body)
+            .width(Length::Fill)
+            .padding(Padding::new(24.0).top(20.0)),
+    )
+    .height(Length::Fill)
+    .width(Length::Fill);
+
+    let games: material::Element<'a, Message> = match &state.syncing {
+        Some(syncing) => Stack::new()
+            .push(games)
+            .push(sync_indicator(syncing))
+            .into(),
+        None => games.into(),
+    };
+
+    Column::new()
+        .push(header)
+        .push(games)
         .width(Length::Fill)
+        .height(Length::Fill)
         .into()
 }
 
@@ -650,5 +756,34 @@ mod tests {
 
         game.game_directory = Some("/games/wa2".into());
         assert_eq!(reveal_path(&game).as_deref(), Some("/games/wa2"));
+    }
+
+    #[test]
+    fn the_refresh_indicator_grows_in_and_shrinks_away() {
+        let start = Instant::now();
+        let at = |ms| start + Duration::from_millis(ms);
+        let mut syncing = Syncing::new(start);
+
+        assert!(syncing.advance(at(200)));
+        assert!(syncing.scale > 0.0 && syncing.scale < 1.0);
+        assert!(syncing.advance(at(400)));
+        assert_eq!(syncing.scale, 1.0);
+
+        // Done: it shrinks from where it is, then is gone.
+        syncing.finish(at(1000));
+        assert!(!syncing.is_running());
+        assert!(syncing.advance(at(1075)));
+        let shrinking = syncing.scale;
+        assert!(shrinking > 0.0 && shrinking < 1.0);
+
+        // Another sync grows it back from that size, not from nothing.
+        syncing.start(at(1075));
+        assert!(syncing.is_running());
+        assert!(syncing.advance(at(1075)));
+        assert_eq!(syncing.scale, shrinking);
+
+        syncing.finish(at(2000));
+        assert!(!syncing.advance(at(2150)));
+        assert_eq!(syncing.scale, 0.0);
     }
 }

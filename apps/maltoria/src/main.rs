@@ -486,8 +486,18 @@ impl App {
     /// Shows the loading indicator until the sync finishes or fails. A sync
     /// asked for while one runs joins it, and the indicator keeps going.
     fn start_syncing(&mut self) {
-        if self.library.syncing.is_none() {
-            self.library.syncing = Some(progress_bar::IndeterminateState::new(Instant::now()));
+        let now = Instant::now();
+
+        match &mut self.library.syncing {
+            Some(syncing) => syncing.start(now),
+            None => self.library.syncing = Some(library::Syncing::new(now)),
+        }
+    }
+
+    /// The sync is over: the indicator goes away.
+    fn finish_syncing(&mut self) {
+        if let Some(syncing) = &mut self.library.syncing {
+            syncing.finish(Instant::now());
         }
     }
 
@@ -597,8 +607,10 @@ fn update(app: &mut App, message: Message) -> Task<Message> {
             }
             let _ = app.appearance.advance(now);
 
-            if let Some(syncing) = &mut app.library.syncing {
-                syncing.advance(now);
+            if let Some(syncing) = &mut app.library.syncing
+                && !syncing.advance(now)
+            {
+                app.library.syncing = None;
             }
 
             // A dismissed dialog lets go of its game once it is gone.
@@ -1406,7 +1418,7 @@ fn metadata_event(app: &mut App, update: MetadataUpdate) -> Task<Message> {
             failed,
             automatic,
         } => {
-            app.library.syncing = None;
+            app.finish_syncing();
 
             if !automatic {
                 if let Some(bridge) = &app.bridge {
@@ -1419,7 +1431,7 @@ fn metadata_event(app: &mut App, update: MetadataUpdate) -> Task<Message> {
             }
         }
         MetadataUpdate::SyncFailed { reason } => {
-            app.library.syncing = None;
+            app.finish_syncing();
             app.notify(reason);
         }
         MetadataUpdate::Failed { reason } => app.notify(reason),
