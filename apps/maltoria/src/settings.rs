@@ -1,12 +1,11 @@
-//! Settings: the Wine runtime, the container, the game folders added before
-//! games were added by their executables, and the look.
+//! Settings: the Wine runtime, the container, and the look.
 //!
 //! Only what a visual novel needs is here; the container's Wine tools cover
 //! the rest.
 
 use iced::widget::{Column, Row, Space, button as iced_button, container};
 use iced::{Alignment, Length};
-use maltoria_core::bridge::dto::{Container, FoldersDto, SetupStatusDto};
+use maltoria_core::bridge::dto::{Container, SetupStatusDto};
 use maltoria_core::i18n::s;
 use material::widget::button::{self, ButtonVariant};
 use material::widget::theme_picker::MaterialColor;
@@ -65,7 +64,6 @@ pub struct View<'a> {
     pub setup: Option<&'a SetupStatusDto>,
     pub install: Option<&'a Install>,
     pub container: Option<&'a Container>,
-    pub folders: Option<&'a FoldersDto>,
     pub color: MaterialColor,
     /// The appearance's segmented button, whose selection animates.
     pub appearance: &'a segmented_button::State,
@@ -82,15 +80,6 @@ pub fn view(settings: View<'_>) -> material::Element<'_, Message> {
         .into(),
         page::section(app.container_section, container_section(settings.container)).into(),
     ];
-
-    // Games are added by their executables; folders added before stay here
-    // until they are removed.
-    if settings
-        .folders
-        .is_some_and(|folders| !folders.roots.is_empty())
-    {
-        sections.push(page::section(app.folders_section, folders(settings.folders)).into());
-    }
 
     sections.push(
         page::section(
@@ -229,44 +218,6 @@ fn container_section(current: Option<&Container>) -> material::Element<'_, Messa
         )
         .spacing(16)
         .into()
-}
-
-fn folders(folders: Option<&FoldersDto>) -> material::Element<'_, Message> {
-    let app = &s().app;
-    let mut column = Column::new().spacing(8);
-
-    let roots = folders
-        .map(|folders| folders.roots.as_slice())
-        .unwrap_or_default();
-
-    for root in roots {
-        column = column.push(
-            Row::new()
-                .push(material::fonts::icon("folder", 24.0).style(material::text::surface_variant))
-                .push(
-                    material::text::type_scale(
-                        maltoria_core::create_bottle::display_bottle_location(root),
-                        tokens::typography::BODY_LARGE,
-                    )
-                    .width(Length::Fill),
-                )
-                .spacing(16)
-                .align_y(Alignment::Center),
-        );
-    }
-
-    container(
-        Column::new()
-            .push(column)
-            .push(
-                Row::new()
-                    .push(button::button(app.rescan, ButtonVariant::Text).on_press(Message::Rescan))
-                    .spacing(8),
-            )
-            .spacing(16),
-    )
-    .width(Length::Fill)
-    .into()
 }
 
 fn appearance(

@@ -121,7 +121,6 @@ pub enum Message {
     RemoveDismiss,
     SetLocale(String),
     AddProgram,
-    Rescan,
     SyncMetadata,
     // The metadata editor.
     OpenEditor(String),
@@ -858,7 +857,6 @@ fn update(app: &mut App, message: Message) -> Task<Message> {
                 bridge.choose_path("pin", "file", None, None, &["exe"]);
             });
         }
-        Message::Rescan => app.with_container(|bridge, container| bridge.start_scan(container)),
         Message::InstallRuntime => {
             if let Some(bridge) = &app.bridge {
                 app.install = Some(settings::Install::default());
@@ -1370,7 +1368,6 @@ fn view(app: &App) -> material::Element<'_, Message> {
             setup: app.setup.as_ref(),
             install: app.install.as_ref(),
             container: app.container(),
-            folders: app.folders.as_ref(),
             color: app.theme.selected_color(),
             appearance: &app.appearance,
         }),
