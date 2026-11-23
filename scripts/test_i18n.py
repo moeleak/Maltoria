@@ -97,14 +97,14 @@ class TestValidateLocales(unittest.TestCase):
             )
 
     def test_locale_extra_categories_need_count(self):
-        # fr requires `one` even where en's table lacks it; it must render {count}.
-        en = {"s": {"k": {"other": "{count} xs", "zero": "none"}}}
-        fr = {"s": {"k": {"zero": "aucun", "one": "{count} x", "other": "{count} xs"}}}
-        errors = i18n.validate_locales(self.files(en, {"fr": fr}))
+        # ru requires `few` and `many`, which en lacks; they must render {count}.
+        en = {"s": {"k": {"one": "{count} x", "other": "{count} xs"}}}
+        ru = {"s": {"k": {"one": "{count} x", "few": "{count} xa", "many": "{count} xov", "other": "{count} xs"}}}
+        errors = i18n.validate_locales(self.files(en, {"ru": ru}))
         self.assertEqual(errors, [])
-        fr2 = {"s": {"k": {"zero": "aucun", "one": "un", "other": "{count} xs"}}}
-        errors = i18n.validate_locales(self.files(en, {"fr": fr2}))
-        self.assertTrue(any("must contain" in e for e in errors))
+        ru2 = {"s": {"k": {"one": "{count} x", "few": "a few x", "many": "{count} xov", "other": "{count} xs"}}}
+        errors = i18n.validate_locales(self.files(en, {"ru": ru2}))
+        self.assertTrue(any("few: category absent from en.toml must contain" in e for e in errors))
         # `zero` stays a free-form n == 0 override even where en lacks it.
         en2 = {"s": {"k": {"one": "{count} x", "other": "{count} xs"}}}
         ja = {"s": {"k": {"zero": "なし", "other": "{count}個"}}}
