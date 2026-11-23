@@ -230,6 +230,7 @@ fn search<'a>(
 
             row.push(
                 button::chip(onboarding::source_label(source), variant)
+                    .alpha(alpha)
                     .on_press(Message::EditorSource(source.clone())),
             )
         });
@@ -431,14 +432,7 @@ fn icon_action<'a>(
     alpha: f32,
 ) -> material::Element<'a, Message> {
     let button = button::icon_button(icon, button::IconButtonVariant::Standard)
-        .style(move |theme, status| {
-            let mut style = material::style::button::icon(theme, status);
-            style.background = style
-                .background
-                .map(|background| background.scale_alpha(alpha));
-            style.text_color = style.text_color.scale_alpha(alpha);
-            style
-        })
+        .alpha(alpha)
         .on_press_maybe(on_press);
 
     tooltip::plain(button, label, tooltip::Position::Top).into()

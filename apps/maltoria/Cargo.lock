@@ -1918,7 +1918,7 @@ dependencies = [
 [[package]]
 name = "material-ui-rs"
 version = "0.5.3"
-source = "git+https://github.com/moeleak/material-ui-rs.git?branch=main#77743164b99f0aba35b9b56109dbabf6bd0f1a70"
+source = "git+https://github.com/moeleak/material-ui-rs.git?branch=main#ba6b955455edc2547b3f1e1415b5b53fa1695c89"
 dependencies = [
  "android-activity",
  "futures-timer",
