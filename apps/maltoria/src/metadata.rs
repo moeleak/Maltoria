@@ -15,7 +15,7 @@ use maltoria_core::model::Game;
 use maltoria_core::onboarding::{self, MetadataPreferences};
 use material::tokens;
 use material::widget::button::{self, ChipVariant};
-use material::widget::{dialog, image, text_input};
+use material::widget::{dialog, image, text_input, tooltip};
 use material_ui_rs as material;
 
 use crate::Message;
@@ -234,7 +234,6 @@ fn search<'a>(
             )
         });
 
-    let options = dialog::AlphaOptions::default().alpha(alpha);
     let can_search = !editor.searching && !editor.query.trim().is_empty();
 
     let query = Row::new()
@@ -245,18 +244,16 @@ fn search<'a>(
                 .alpha(alpha)
                 .width(Length::Fill),
         )
-        .push(
-            dialog::action_with_icon(
-                "search",
-                if editor.searching {
-                    s().common.searching
-                } else {
-                    s().common.search
-                },
-                options,
-            )
-            .on_press_maybe(can_search.then_some(Message::EditorSearch)),
-        )
+        .push(icon_action(
+            "search",
+            if editor.searching {
+                s().common.searching
+            } else {
+                s().common.search
+            },
+            can_search.then_some(Message::EditorSearch),
+            alpha,
+        ))
         .spacing(8)
         .align_y(Alignment::Center);
 
@@ -268,11 +265,12 @@ fn search<'a>(
                 .alpha(alpha)
                 .width(Length::Fill),
         )
-        .push(
-            dialog::action_with_icon("link", dialogs.link_to_draft, options).on_press_maybe(
-                (!editor.link.trim().is_empty()).then_some(Message::EditorLinkById),
-            ),
-        )
+        .push(icon_action(
+            "link",
+            dialogs.link_to_draft,
+            (!editor.link.trim().is_empty()).then_some(Message::EditorLinkById),
+            alpha,
+        ))
         .spacing(8)
         .align_y(Alignment::Center);
 
@@ -322,12 +320,15 @@ fn result<'a>(
     .collect::<Vec<_>>()
     .join(" · ");
 
-    let options = dialog::AlphaOptions::default().alpha(alpha);
     let action = if editor.is_linked(candidate) {
-        dialog::action_with_icon("check", s().dialogs.in_draft, options)
+        icon_action("check", s().dialogs.in_draft, None, alpha)
     } else {
-        dialog::action_with_icon("link", s().dialogs.link_to_draft, options)
-            .on_press(Message::EditorLink(index))
+        icon_action(
+            "link",
+            s().dialogs.link_to_draft,
+            Some(Message::EditorLink(index)),
+            alpha,
+        )
     };
 
     Row::new()
@@ -380,7 +381,6 @@ fn clip(text: &str, chars: usize) -> String {
 fn linked(editor: &Editor, alpha: f32) -> material::Element<'_, Message> {
     let dialogs = &s().dialogs;
     let bindings = editor.bindings();
-    let options = dialog::AlphaOptions::default().alpha(alpha);
 
     let mut column = Column::new()
         .push(details::faded(
@@ -409,15 +409,39 @@ fn linked(editor: &Editor, alpha: f32) -> material::Element<'_, Message> {
                     )
                     .width(Length::Fill),
                 )
-                .push(
-                    dialog::action_with_icon("link_off", dialogs.unlink, options)
-                        .on_press(Message::EditorUnlink(source.to_owned())),
-                )
+                .push(icon_action(
+                    "link_off",
+                    dialogs.unlink,
+                    Some(Message::EditorUnlink(source.to_owned())),
+                    alpha,
+                ))
                 .align_y(Alignment::Center),
         );
     }
 
     column.into()
+}
+
+/// A button that shows only its icon, naming itself in a tooltip, and fades
+/// with the dialog.
+fn icon_action<'a>(
+    icon: &'a str,
+    label: &'a str,
+    on_press: Option<Message>,
+    alpha: f32,
+) -> material::Element<'a, Message> {
+    let button = button::icon_button(icon, button::IconButtonVariant::Standard)
+        .style(move |theme, status| {
+            let mut style = material::style::button::icon(theme, status);
+            style.background = style
+                .background
+                .map(|background| background.scale_alpha(alpha));
+            style.text_color = style.text_color.scale_alpha(alpha);
+            style
+        })
+        .on_press_maybe(on_press);
+
+    tooltip::plain(button, label, tooltip::Position::Top).into()
 }
 
 fn cover(editor: &Editor, alpha: f32) -> material::Element<'_, Message> {
