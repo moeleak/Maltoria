@@ -15,6 +15,7 @@ pub mod host;
 pub mod i18n;
 pub mod library_layout;
 pub mod library_view;
+pub mod metadata_draft;
 pub mod model;
 pub mod onboarding;
 pub mod platform;
