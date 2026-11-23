@@ -92,8 +92,6 @@ pub enum Message {
     /// Answers the helper's clipboard question before a launch.
     ClipboardDecide(maltoria_core::runtime::ClipboardDecision),
     ClipboardDismiss,
-    /// Half a minute passed while games run.
-    Tick,
     DevShot(String, iced::window::Screenshot),
     // The library.
     Query(String),
@@ -162,7 +160,6 @@ pub struct App {
     creating: bool,
     games: Vec<Game>,
     runtime: RuntimeTable,
-    sessions: playing::Sessions,
     /// The clipboard question a launch is waiting on, while it shows.
     clipboard: Option<maltoria_core::runtime::ClipboardPrompt>,
     clipboard_transition: dialog::Transition,
@@ -224,7 +221,6 @@ fn boot() -> (App, Task<Message>) {
         creating: false,
         games: Vec::new(),
         runtime: RuntimeTable::default(),
-        sessions: playing::Sessions::default(),
         clipboard: None,
         clipboard_transition: dialog::Transition::default(),
         library: library::State::default(),
@@ -287,10 +283,6 @@ fn subscription(app: &App) -> Subscription<Message> {
         }),
         dev::requests(),
     ];
-
-    if !app.sessions.is_empty() {
-        subscriptions.push(playing::ticker());
-    }
 
     if app.navigation.is_animating()
         || app.theme.is_animating()
@@ -535,7 +527,6 @@ fn update(app: &mut App, message: Message) -> Task<Message> {
         }
         Message::DismissNotice => app.snackbar.dismiss(Instant::now()),
         Message::DevPoll => return dev_requests(app),
-        Message::Tick => {}
         Message::ClipboardDecide(decision) => {
             if let (Some(bridge), Some(prompt)) = (&app.bridge, app.clipboard.clone()) {
                 bridge.resolve_clipboard(prompt, decision);
@@ -930,8 +921,6 @@ fn bridge_event(app: &mut App, event: BridgeEvent) -> Task<Message> {
         BridgeEvent::Runtime(update) => {
             if app.container.as_deref() == Some(update.container.as_str()) {
                 app.runtime.apply(update);
-                app.sessions
-                    .update(&app.games, &app.runtime, Instant::now());
             }
         }
         BridgeEvent::Preferences { values, .. } => {
@@ -1258,7 +1247,7 @@ fn view(app: &App) -> material::Element<'_, Message> {
     let page: material::Element<'_, Message> = match app.navigation.selected() {
         Page::Library => match setup_view(app) {
             Some(setup) => setup,
-            None => library::view(&app.games, &app.library, &app.runtime, &app.sessions),
+            None => library::view(&app.games, &app.library, &app.runtime),
         },
         Page::Activity => activity::view(&app.games, chrono::Local::now().date_naive()),
         Page::Settings => settings::view(settings::View {

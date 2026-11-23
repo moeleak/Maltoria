@@ -233,7 +233,6 @@ pub fn view<'a>(
     games: &'a [Game],
     state: &'a State,
     runtime: &'a RuntimeTable,
-    sessions: &'a playing::Sessions,
 ) -> material::Element<'a, Message> {
     let indices = visible(games, &state.query, state.filter, state.sort);
 
@@ -303,8 +302,8 @@ pub fn view<'a>(
     // bars float over it, so that the grid keeps its place in the tree:
     // moving it would reset its widgets' state, such as a context menu that
     // selecting the game just opened.
-    let playing: material::Element<'a, Message> =
-        playing::bars(games, runtime, sessions, &state.covers).map_or_else(
+    let playing: material::Element<'a, Message> = playing::bars(games, runtime, &state.covers)
+        .map_or_else(
             || Space::new().into(),
             |bars| {
                 container(bars)

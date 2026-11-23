@@ -22,7 +22,7 @@ iced = { version = "=0.14.0", default-features = false, features = [
     "x11",
 ] }
 maltoria-core = { path = "../../crates/maltoria-core" }
-material-ui-rs = { git = "https://github.com/moeleak/material-ui-rs.git", branch = "feat/launcher-widgets" }
+material-ui-rs = { git = "https://github.com/moeleak/material-ui-rs.git", branch = "main" }
 serde = { version = "=1.0.229", features = ["derive"] }
 serde_json = "=1.0.154"
 smol = "=2.0.2"
