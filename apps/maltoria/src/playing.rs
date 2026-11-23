@@ -1,19 +1,15 @@
 //! What is running now: a badge on the cover of a game that is starting or
-//! running, and a floating toolbar at the bottom of the library for each such
-//! game, with a way to stop it. A launch's clipboard question is here too.
+//! running. A launch's clipboard question is here too.
 
-use iced::widget::{Column, Row, container, text};
-use iced::{Alignment, Length};
+use iced::Alignment;
+use iced::widget::{Row, container};
 use maltoria_core::model::Game;
-use maltoria_core::runtime::{
-    ClipboardDecision, ClipboardPrompt, RuntimeAction, RuntimeState, RuntimeTable,
-};
-use material::widget::{dialog, image, toolbar};
+use maltoria_core::runtime::{ClipboardDecision, ClipboardPrompt, RuntimeState, RuntimeTable};
+use material::widget::dialog;
 use material::{Theme, tokens};
 use material_ui_rs as material;
 
 use crate::Message;
-use crate::library;
 
 fn state(runtime: &RuntimeTable, game: &Game) -> Option<RuntimeState> {
     runtime.entry(&game.id).map(|entry| entry.state)
@@ -52,63 +48,6 @@ pub fn badge<'a>(runtime: &RuntimeTable, game: &Game) -> Option<material::Elemen
         })
         .into(),
     )
-}
-
-/// A floating toolbar for each starting or running game, or nothing.
-pub fn bars<'a>(
-    games: &'a [Game],
-    runtime: &'a RuntimeTable,
-    covers: &'a image::Cache<String>,
-) -> Option<material::Element<'a, Message>> {
-    let bars: Vec<material::Element<'a, Message>> = games
-        .iter()
-        .filter(|game| state(runtime, game).is_some_and(RuntimeState::is_active))
-        .map(|game| bar(game, runtime, covers))
-        .collect();
-
-    (!bars.is_empty()).then(|| Column::with_children(bars).spacing(12).into())
-}
-
-const THUMBNAIL: (f32, f32) = (30.0, 40.0);
-
-fn bar<'a>(
-    game: &'a Game,
-    runtime: &'a RuntimeTable,
-    covers: &'a image::Cache<String>,
-) -> material::Element<'a, Message> {
-    let thumbnail: material::Element<'a, Message> = match covers.handle(&game.id) {
-        Some(handle) => image::shaped(handle.clone(), tokens::shape::CORNER_EXTRA_SMALL).into(),
-        None => image::placeholder(
-            image::Placeholder::Missing,
-            tokens::shape::CORNER_EXTRA_SMALL,
-        )
-        .into(),
-    };
-
-    let title = text(game.title.as_str())
-        .size(tokens::typography::LABEL_LARGE.size)
-        .wrapping(text::Wrapping::None);
-
-    let primary = library::primary_action(runtime, game);
-    let mut actions = vec![
-        container(thumbnail)
-            .width(Length::Fixed(THUMBNAIL.0))
-            .height(Length::Fixed(THUMBNAIL.1))
-            .into(),
-        container(title).padding([0, 8]).into(),
-    ];
-
-    if let Some(message) = library::action_message(primary.action, game) {
-        let icon = match primary.action {
-            Some(RuntimeAction::Stop) => "stop",
-            Some(RuntimeAction::Cancel) => "close",
-            _ => "play_arrow",
-        };
-
-        actions.push(toolbar::vibrant_icon_action(icon, message));
-    }
-
-    toolbar::floating_vibrant(actions).into()
 }
 
 /// The size of what the clipboard holds, as the GPUI app writes it.

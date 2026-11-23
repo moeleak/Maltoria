@@ -298,29 +298,9 @@ pub fn view<'a>(
         .padding(24)
         .width(Length::Fill);
 
-    // The details open in a dialog over the page, and the running games'
-    // bars float over it, so that the grid keeps its place in the tree:
-    // moving it would reset its widgets' state, such as a context menu that
-    // selecting the game just opened.
-    let playing: material::Element<'a, Message> = playing::bars(games, runtime, &state.covers)
-        .map_or_else(
-            || Space::new().into(),
-            |bars| {
-                container(bars)
-                    .width(Length::Fill)
-                    .height(Length::Fill)
-                    .align_x(Alignment::Center)
-                    .align_y(iced::alignment::Vertical::Bottom)
-                    .padding(24)
-                    .into()
-            },
-        );
-
-    Stack::new()
-        .push(scrollable(library).height(Length::Fill).width(Length::Fill))
-        .push(playing)
-        .width(Length::Fill)
+    scrollable(library)
         .height(Length::Fill)
+        .width(Length::Fill)
         .into()
 }
 
