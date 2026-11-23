@@ -178,7 +178,7 @@ pub fn view<'a>(
                 .on_press(Message::OpenEditor(game.id.clone()))
                 .into(),
             dialog::action_button_with(s().common.close, Message::CloseDetails, options),
-            dialog::action_with(primary.label, options)
+            dialog::action_with_icon(library::action_icon(&primary), primary.label, options)
                 .on_press_maybe(library::action_message(primary.action, game))
                 .into(),
         ]),

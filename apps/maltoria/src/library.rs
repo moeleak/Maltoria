@@ -6,7 +6,7 @@
 
 use std::cmp::Ordering;
 
-use iced::widget::{Column, Row, container, mouse_area, scrollable, sensor, text};
+use iced::widget::{Column, Row, Space, Stack, container, mouse_area, scrollable, sensor, text};
 use iced::{Alignment, Length};
 use maltoria_core::i18n::s;
 use maltoria_core::library_view::{matches_query, natural_cmp};
@@ -19,9 +19,11 @@ use material::{Theme, tokens};
 use material_ui_rs as material;
 
 use crate::Message;
+use crate::playing;
 
-/// The widest a cover gets before the grid adds a column.
-pub const MAX_COVER_WIDTH: f32 = 176.0;
+/// The width of a cover. Covers keep it as the window resizes, which only
+/// changes how many fit in a row.
+pub const COVER_WIDTH: f32 = 168.0;
 /// Covers are 3:4, the shape of most visual novel packages; others are cropped.
 pub const COVER_RATIO: f32 = 3.0 / 4.0;
 /// The longest side covers are decoded to: twice the widest cover, for Retina.
@@ -183,11 +185,36 @@ impl Default for State {
     }
 }
 
-/// What a game's primary button does now.
+/// What a game's primary button does now; "Launch Game" while it is idle,
+/// and before the helper first reports it.
 pub fn primary_action(runtime: &RuntimeTable, game: &Game) -> PrimaryAction {
-    match runtime.entry(&game.id) {
+    let primary = match runtime.entry(&game.id) {
         Some(entry) => primary_action_for(entry.state, entry.capabilities),
-        None => PrimaryAction::unavailable(),
+        None => PrimaryAction {
+            action: Some(RuntimeAction::Launch),
+            enabled: true,
+            ..PrimaryAction::unavailable()
+        },
+    };
+
+    if primary.action == Some(RuntimeAction::Launch) {
+        PrimaryAction {
+            label: s().library.launch_game,
+            ..primary
+        }
+    } else {
+        primary
+    }
+}
+
+/// The icon of a primary action: play to launch, stop, or cancel.
+pub fn action_icon(primary: &PrimaryAction) -> &'static str {
+    match primary.action {
+        Some(RuntimeAction::Launch) => "play_arrow",
+        Some(RuntimeAction::Stop) => "stop",
+        Some(RuntimeAction::Cancel) => "close",
+        None if primary.busy => "hourglass_top",
+        None => "play_arrow",
     }
 }
 
@@ -206,6 +233,7 @@ pub fn view<'a>(
     games: &'a [Game],
     state: &'a State,
     runtime: &'a RuntimeTable,
+    sessions: &'a playing::Sessions,
 ) -> material::Element<'a, Message> {
     let indices = visible(games, &state.query, state.filter, state.sort);
 
@@ -254,8 +282,8 @@ pub fn view<'a>(
             false,
         )
     } else {
-        grid::grid(
-            MAX_COVER_WIDTH,
+        grid::fixed(
+            COVER_WIDTH,
             indices
                 .iter()
                 .map(|&index| cell(&games[index], state, runtime)),
@@ -271,12 +299,29 @@ pub fn view<'a>(
         .padding(24)
         .width(Length::Fill);
 
-    // The details open in a dialog over the page, so that the grid keeps
-    // its place in the tree: moving it would reset its widgets' state, such
-    // as a context menu that selecting the game just opened.
-    scrollable(library)
-        .height(Length::Fill)
+    // The details open in a dialog over the page, and the running games'
+    // bars float over it, so that the grid keeps its place in the tree:
+    // moving it would reset its widgets' state, such as a context menu that
+    // selecting the game just opened.
+    let playing: material::Element<'a, Message> =
+        playing::bars(games, runtime, sessions, &state.covers).map_or_else(
+            || Space::new().into(),
+            |bars| {
+                container(bars)
+                    .width(Length::Fill)
+                    .height(Length::Fill)
+                    .align_x(Alignment::Center)
+                    .align_y(iced::alignment::Vertical::Bottom)
+                    .padding(24)
+                    .into()
+            },
+        );
+
+    Stack::new()
+        .push(scrollable(library).height(Length::Fill).width(Length::Fill))
+        .push(playing)
         .width(Length::Fill)
+        .height(Length::Fill)
         .into()
 }
 
@@ -312,10 +357,19 @@ fn cell<'a>(
     runtime: &'a RuntimeTable,
 ) -> material::Element<'a, Message> {
     let selected = state.selected.as_deref() == Some(game.id.as_str());
-    let caption = caption(game, runtime);
+    let caption = caption(game);
+
+    let badge: material::Element<'a, Message> = playing::badge(runtime, game).map_or_else(
+        || Space::new().into(),
+        |badge| container(badge).padding(8).into(),
+    );
 
     let body = Column::new()
-        .push(cover_art(game, &state.covers, tokens::shape::CORNER_MEDIUM))
+        .push(
+            Stack::new()
+                .push(cover_art(game, &state.covers, tokens::shape::CORNER_MEDIUM))
+                .push(badge),
+        )
         .push(
             material::text::type_scale(game.title.as_str(), tokens::typography::TITLE_SMALL)
                 .wrapping(text::Wrapping::WordOrGlyph),
@@ -343,11 +397,7 @@ fn cell<'a>(
         .interaction(iced::mouse::Interaction::Pointer);
 
     let primary = primary_action(runtime, game);
-    let primary_icon = match primary.action {
-        Some(RuntimeAction::Stop) => "stop_circle",
-        Some(RuntimeAction::Cancel) => "cancel",
-        _ => "play_arrow",
-    };
+    let primary_icon = action_icon(&primary);
 
     menu::context(body)
         .on_open(Message::Select(id.clone()))
@@ -385,14 +435,9 @@ fn cell<'a>(
         .into()
 }
 
-/// The line under a cover: what the game is doing, or its play time.
-fn caption(game: &Game, runtime: &RuntimeTable) -> String {
-    if let Some(entry) = runtime.entry(&game.id)
-        && entry.state.is_active()
-    {
-        return entry.state.phase_label().to_owned();
-    }
-
+/// The line under a cover: its play time; the badge on the cover tells what
+/// a running game is doing.
+fn caption(game: &Game) -> String {
     format_play_time(game.play_time).unwrap_or_else(|| s().app.not_played_yet.to_owned())
 }
 

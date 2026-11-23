@@ -11,6 +11,7 @@ mod details;
 mod dev;
 mod library;
 mod metadata;
+mod playing;
 mod pointer;
 mod prefs;
 mod settings;
@@ -88,6 +89,8 @@ pub enum Message {
     Retry,
     DismissNotice,
     DevPoll,
+    /// Half a minute passed while games run.
+    Tick,
     DevShot(String, iced::window::Screenshot),
     // The library.
     Query(String),
@@ -156,6 +159,7 @@ pub struct App {
     creating: bool,
     games: Vec<Game>,
     runtime: RuntimeTable,
+    sessions: playing::Sessions,
     library: library::State,
     /// The game whose details dialog is open, or closing.
     details: Option<String>,
@@ -214,6 +218,7 @@ fn boot() -> (App, Task<Message>) {
         creating: false,
         games: Vec::new(),
         runtime: RuntimeTable::default(),
+        sessions: playing::Sessions::default(),
         library: library::State::default(),
         details: None,
         details_transition: dialog::Transition::default(),
@@ -274,6 +279,10 @@ fn subscription(app: &App) -> Subscription<Message> {
         }),
         dev::requests(),
     ];
+
+    if !app.sessions.is_empty() {
+        subscriptions.push(playing::ticker());
+    }
 
     if app.navigation.is_animating()
         || app.theme.is_animating()
@@ -512,6 +521,7 @@ fn update(app: &mut App, message: Message) -> Task<Message> {
         }
         Message::DismissNotice => app.snackbar.dismiss(Instant::now()),
         Message::DevPoll => return dev_requests(app),
+        Message::Tick => {}
         Message::DevShot(name, screenshot) => {
             if let Some(directory) = dev::directory()
                 && let Err(error) = dev::save(&directory, &name, &screenshot)
@@ -899,6 +909,8 @@ fn bridge_event(app: &mut App, event: BridgeEvent) -> Task<Message> {
         BridgeEvent::Runtime(update) => {
             if app.container.as_deref() == Some(update.container.as_str()) {
                 app.runtime.apply(update);
+                app.sessions
+                    .update(&app.games, &app.runtime, Instant::now());
             }
         }
         BridgeEvent::Preferences { values, .. } => {
@@ -1221,7 +1233,7 @@ fn view(app: &App) -> material::Element<'_, Message> {
     let page: material::Element<'_, Message> = match app.navigation.selected() {
         Page::Library => match setup_view(app) {
             Some(setup) => setup,
-            None => library::view(&app.games, &app.library, &app.runtime),
+            None => library::view(&app.games, &app.library, &app.runtime, &app.sessions),
         },
         Page::Activity => activity::view(&app.games, chrono::Local::now().date_naive()),
         Page::Settings => settings::view(settings::View {
