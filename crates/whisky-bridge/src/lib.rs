@@ -1,5 +1,5 @@
 //! UI-independent client for the bundled Swift application service.
-//! Call it from GPUI's background executor. A timeout terminates this session;
+//! Call it off the UI thread. A timeout terminates this session;
 //! mutations then require state readback before a user retries them.
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -565,7 +565,7 @@ mod tests {
         let lib = root.join("usr/lib/whisky");
         std::fs::create_dir_all(&bin).unwrap();
         std::fs::create_dir_all(&lib).unwrap();
-        let exe = bin.join("whisky-gpui");
+        let exe = bin.join("maltoria");
         let helper = lib.join("whisky-bridge");
         std::fs::write(&exe, b"").unwrap();
         std::fs::write(&helper, b"").unwrap();

@@ -83,7 +83,7 @@ struct LinuxDesktopService {
     private func launcher(_ params: [String: JSONValue]) throws -> URL {
         let path = try params["launcher"].map { _ in try params.path("launcher") }
             ?? (Bundle.main.executableURL ?? URL(fileURLWithPath: CommandLine.arguments[0])).deletingLastPathComponent()
-            .appendingPathComponent("whisky-gpui")
+            .appendingPathComponent("maltoria")
         let canonical = path.resolvingSymlinksInPath()
         guard (try? canonical.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true,
               FileManager.default.isExecutableFile(atPath: path.path)

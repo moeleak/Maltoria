@@ -137,7 +137,7 @@ finish_steps() {
     return 0
 }
 
-# Resolve Linux clang defaults when needed (mirrors check-gpui-foundation.py).
+# Resolve Linux clang defaults when needed (mirrors check-foundation.py).
 setup_linux_cc_env() {
     if [[ "$OS_NAME" == "Linux" ]]; then
         if [[ -z "${CC:-}" ]]; then
@@ -184,7 +184,7 @@ find_built_bridge_helper() {
         "$ROOT/WhiskyBridge/.build/out/Products/$cap/whisky-bridge" \
         "$ROOT/WhiskyBridge/.build/$configuration/whisky-bridge" \
         "$ROOT/build/test-bridge-linux/$configuration/whisky-bridge" \
-        "$ROOT/build/portability/gpui-foundation/bridge-build/$configuration/whisky-bridge"; do
+        "$ROOT/build/portability/foundation/bridge-build/$configuration/whisky-bridge"; do
         if [[ -x "$candidate" ]]; then
             printf '%s\n' "$candidate"
             return 0
@@ -276,9 +276,12 @@ run_rust_bridge_sdk() {
     fi
 }
 
-run_rust_gpui() {
+# Run one Rust crate's tests: run_rust_crate <manifest relative to the repo> [--filter <pat>] [--offline]
+run_rust_crate() {
+    local manifest="$1"
+    shift
     require_cmd cargo
-    local test_args=(--locked --manifest-path "$ROOT/apps/whisky-gpui/Cargo.toml")
+    local test_args=(--locked --manifest-path "$ROOT/$manifest")
     local passthrough=()
     local offline=0
     local filter=""
@@ -292,24 +295,15 @@ run_rust_gpui() {
     [[ "$offline" == "1" ]] && test_args+=(--offline)
     [[ -n "$filter" ]] && passthrough+=("$filter")
 
-    local prefix=()
-    if [[ "$OS_NAME" == "Linux" ]]; then
-        export LIBGL_ALWAYS_SOFTWARE="${LIBGL_ALWAYS_SOFTWARE:-1}"
-        if [[ -z "${DISPLAY:-}" && -z "${WAYLAND_DISPLAY:-}" ]]; then
-            if command -v xvfb-run >/dev/null 2>&1; then
-                prefix=(xvfb-run -a)
-            else
-                log_warn "无 DISPLAY/WAYLAND_DISPLAY 且未安装 xvfb-run，尝试直接运行"
-            fi
-        fi
-    fi
-
     if [[ "${#passthrough[@]}" -gt 0 ]]; then
-        RUSTC_WRAPPER="" ${prefix[@]+"${prefix[@]}"} cargo test "${test_args[@]}" -- "${passthrough[@]}"
+        RUSTC_WRAPPER="" cargo test "${test_args[@]}" -- "${passthrough[@]}"
     else
-        RUSTC_WRAPPER="" ${prefix[@]+"${prefix[@]}"} cargo test "${test_args[@]}"
+        RUSTC_WRAPPER="" cargo test "${test_args[@]}"
     fi
 }
+
+run_rust_core() { run_rust_crate crates/maltoria-core/Cargo.toml "$@"; }
+run_rust_app() { run_rust_crate apps/maltoria/Cargo.toml "$@"; }
 
 run_python_tests() {
     detect_python312
@@ -323,7 +317,7 @@ run_foundation() {
     require_cmd python3
     require_cmd swift
     require_cmd cargo
-    (cd "$ROOT" && python3 "$ROOT/scripts/check-gpui-foundation.py" "$@")
+    (cd "$ROOT" && python3 "$ROOT/scripts/check-foundation.py" "$@")
 }
 
 # Action handlers
@@ -378,7 +372,7 @@ cmd_all() {
         esac
     done
 
-    run_step "GPUI Foundation 门禁 (Core/Metadata/Bridge + 真实 helper Rust SDK)" \
+    run_step "Foundation 门禁 (Core/Metadata/Bridge + 真实 helper Rust SDK)" \
         run_foundation ${foundation_args[@]+"${foundation_args[@]}"}
 
     run_step "WhiskyTranslation 跨平台翻译核心测试" \
@@ -393,8 +387,11 @@ cmd_all() {
         skip_step "WhiskyKit 测试套件" "仅支持 macOS"
     fi
 
-    run_step "apps/whisky-gpui 测试套件 (单元测试 + 无头状态机)" \
-        run_rust_gpui ${cargo_args[@]+"${cargo_args[@]}"}
+    run_step "crates/maltoria-core 测试套件" \
+        run_rust_core ${cargo_args[@]+"${cargo_args[@]}"}
+
+    run_step "apps/maltoria 测试套件" \
+        run_rust_app ${cargo_args[@]+"${cargo_args[@]}"}
 
     run_step "Python 构建与覆盖率脚本测试" \
         run_python_tests
@@ -433,8 +430,8 @@ cmd_engines() {
     run_step "crates/whisky-bridge 协议与真实 helper 测试" \
         run_rust_bridge_sdk 1 ${rust_extra[@]+"${rust_extra[@]}"}
 
-    run_step "apps/whisky-gpui 引擎 DTO/状态机/UI 测试" \
-        run_rust_gpui --filter "engine" ${rust_extra[@]+"${rust_extra[@]}"}
+    run_step "crates/maltoria-core 引擎 DTO/状态机测试" \
+        run_rust_core --filter "engine" ${rust_extra[@]+"${rust_extra[@]}"}
 
     finish_steps
 }
@@ -515,18 +512,24 @@ cmd_rust() {
             run_step "Rust: crates/whisky-bridge" \
                 run_rust_bridge_sdk "$with_helper" ${pass_args[@]+"${pass_args[@]}"}
             ;;
-        gpui)
-            run_step "Rust: apps/whisky-gpui" \
-                run_rust_gpui ${pass_args[@]+"${pass_args[@]}"}
+        maltoria-core)
+            run_step "Rust: crates/maltoria-core" \
+                run_rust_core ${pass_args[@]+"${pass_args[@]}"}
+            ;;
+        maltoria)
+            run_step "Rust: apps/maltoria" \
+                run_rust_app ${pass_args[@]+"${pass_args[@]}"}
             ;;
         all)
             run_step "Rust: crates/whisky-bridge" \
                 run_rust_bridge_sdk "$with_helper" ${pass_args[@]+"${pass_args[@]}"}
-            run_step "Rust: apps/whisky-gpui" \
-                run_rust_gpui ${pass_args[@]+"${pass_args[@]}"}
+            run_step "Rust: crates/maltoria-core" \
+                run_rust_core ${pass_args[@]+"${pass_args[@]}"}
+            run_step "Rust: apps/maltoria" \
+                run_rust_app ${pass_args[@]+"${pass_args[@]}"}
             ;;
         *)
-            die "未知 Rust 目标: $target（可选: bridge-sdk, gpui, all）"
+            die "未知 Rust 目标: $target（可选: bridge-sdk, maltoria-core, maltoria, all）"
             ;;
     esac
     finish_steps
@@ -591,7 +594,7 @@ cmd_live_wine() {
 
 cmd_linux_full() {
     [[ "$OS_NAME" == "Linux" ]] || die "linux-full 仅支持 Linux 环境"
-    exec bash "$ROOT/apps/whisky-gpui/tools/check-linux.sh" "$@"
+    exec bash "$ROOT/apps/maltoria/tools/check-linux.sh" "$@"
 }
 
 apply_sandbox_env() {
@@ -599,8 +602,6 @@ apply_sandbox_env() {
     mkdir -p "$sandbox_dir/config" "$sandbox_dir/data" "$sandbox_dir/state"
     export XDG_CONFIG_HOME="$sandbox_dir/config"
     export XDG_DATA_HOME="$sandbox_dir/data"
-    export WHISKY_GPUI_STATE="$sandbox_dir/state/gpui-state.json"
-    export WHISKY_GPUI_APPEARANCE_STATE="$sandbox_dir/state/appearance.json"
     export WHISKY_REGISTRY="$sandbox_dir/BottleVM.plist"
     export WHISKY_WINE_ENGINES_REGISTRY="$sandbox_dir/Wine Engines.json"
     log_info "已启用隔离沙箱目录: $sandbox_dir"
@@ -608,20 +609,20 @@ apply_sandbox_env() {
     log_info "  WHISKY_WINE_ENGINES_REGISTRY=$WHISKY_WINE_ENGINES_REGISTRY"
 }
 
-build_gpui_binary() {
+build_app_binary() {
     local profile="${1:-debug}"
     local skip_build="${2:-0}"
-    local cargo_flags=(--locked --manifest-path "$ROOT/apps/whisky-gpui/Cargo.toml")
-    local bin="$ROOT/apps/whisky-gpui/target/$profile/whisky-gpui"
+    local cargo_flags=(--locked --manifest-path "$ROOT/apps/maltoria/Cargo.toml")
+    local bin="$ROOT/apps/maltoria/target/$profile/maltoria"
     if [[ "$profile" == "release" ]]; then
         cargo_flags+=(--release)
     fi
     if [[ "$skip_build" != "1" ]]; then
         require_cmd cargo
-        log_info "构建 whisky-gpui ($profile)..." >&2
+        log_info "构建 maltoria ($profile)..." >&2
         RUSTC_WRAPPER="" cargo build "${cargo_flags[@]}" >&2
     fi
-    [[ -x "$bin" ]] || die "未找到 whisky-gpui 可执行文件: $bin"
+    [[ -x "$bin" ]] || die "未找到 maltoria 可执行文件: $bin"
     printf '%s\n' "$bin"
 }
 
@@ -649,7 +650,7 @@ cmd_gui() {
         rm -rf "$sandbox_dir"
     fi
     [[ "$sandbox" == "1" ]] && apply_sandbox_env "$sandbox_dir"
-    [[ "$demo" == "1" ]] && export WHISKY_GPUI_DEMO_DATA=1
+    [[ "$demo" == "1" ]] && export MALTORIA_DEMO=1
     [[ "$no_wine" == "1" ]] && export WHISKY_BRIDGE_NO_WINE=1
 
     local profile="debug"
@@ -667,73 +668,9 @@ cmd_gui() {
     log_info "WHISKY_BRIDGE_HELPER=$WHISKY_BRIDGE_HELPER"
 
     local bin
-    bin="$(build_gpui_binary "$profile" "$skip_build")"
-    log_head "启动 Maltoria GPUI ($profile)"
+    bin="$(build_app_binary "$profile" "$skip_build")"
+    log_head "启动 Maltoria ($profile)"
     exec "$bin" ${extra_args[@]+"${extra_args[@]}"}
-}
-
-cmd_diag() {
-    local mode="${1:-status}"
-    if [[ $# -gt 0 && "$1" != -* ]]; then
-        shift
-    fi
-
-    local sandbox=0 no_wine=0 skip_build=0 bottle="" entry="" seconds=""
-    local sandbox_dir="${WHISKY_TEST_SANDBOX:-$ROOT/build/manual-test-sandbox}"
-    local raw_args=()
-
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            --sandbox) sandbox=1; shift ;;
-            --sandbox-dir) sandbox=1; sandbox_dir="${2:?--sandbox-dir 需要路径}"; shift 2 ;;
-            --no-wine) no_wine=1; shift ;;
-            --skip-build) skip_build=1; shift ;;
-            --bottle) bottle="${2:?--bottle 需要名称或路径}"; shift 2 ;;
-            --entry) entry="${2:?--entry 需要关键字}"; shift 2 ;;
-            --seconds) seconds="${2:?--seconds 需要秒数}"; shift 2 ;;
-            --) shift; raw_args+=("$@"); break ;;
-            *) raw_args+=("$1"); shift ;;
-        esac
-    done
-
-    [[ "$sandbox" == "1" ]] && apply_sandbox_env "$sandbox_dir"
-    [[ "$no_wine" == "1" ]] && export WHISKY_BRIDGE_NO_WINE=1
-
-    local helper=""
-    if [[ "$skip_build" != "1" ]]; then
-        helper="$(build_bridge_helper debug)"
-    else
-        helper="$(find_built_bridge_helper debug || true)"
-        [[ -x "$helper" ]] || die "未找到已构建的 whisky-bridge（去掉 --skip-build 以自动构建）"
-    fi
-    export WHISKY_BRIDGE_HELPER="$helper"
-
-    local bin
-    bin="$(build_gpui_binary debug "$skip_build")"
-
-    local args=()
-    case "$mode" in
-        status)     args=(--print-bridge-status) ;;
-        runtime)    args=(--print-runtime) ;;
-        library)    args=(--print-library); [[ -z "$bottle" ]] && args+=(--all) ;;
-        config)     args=(--print-config) ;;
-        folders)    args=(--print-folders) ;;
-        winetricks) args=(--print-winetricks) ;;
-        programs)   args=(--print-programs) ;;
-        processes)  args=(--print-processes) ;;
-        watch)      args=(--runtime-watch) ;;
-        launch)     args=(--diagnose-launch) ;;
-        raw)        args=() ;;
-        *) die "未知诊断模式: $mode（可选: status, runtime, library, config, folders, winetricks, programs, processes, watch, launch, raw）" ;;
-    esac
-
-    [[ -n "$bottle" ]] && args+=(--bottle "$bottle")
-    [[ -n "$entry" ]] && args+=(--entry "$entry")
-    [[ -n "$seconds" ]] && args+=(--seconds "$seconds")
-    args+=(${raw_args[@]+"${raw_args[@]}"})
-
-    log_head "whisky-gpui 诊断 ($mode)"
-    exec "$bin" "${args[@]}"
 }
 
 cmd_cmd() {
@@ -771,27 +708,26 @@ cmd_list() {
 可用测试与手动验证命令 (./test.sh <command> [options]):
 
   自动化测试:
-    all         运行当前平台完整测试套件 (foundation + WhiskyKit[macOS] + gpui + python)
+    all         运行当前平台完整测试套件 (foundation + WhiskyKit[macOS] + core + maltoria + python)
     engines     快速聚焦本分支 (feat/custom-wine-engines) 自定义 Wine 引擎相关测试
-    foundation  运行 GPUI Foundation 门禁 (scripts/check-gpui-foundation.py)
+    foundation  运行 Foundation 门禁 (scripts/check-foundation.py)
     swift       运行 Swift 包测试: [core|metadata|bridge|kit|translation|all] [--filter <pat>] [--coverage] [--offline]
-    rust        运行 Rust 测试: [bridge-sdk|gpui|all] [--filter <pat>] [--no-helper] [--offline]
+    rust        运行 Rust 测试: [bridge-sdk|maltoria-core|maltoria|all] [--filter <pat>] [--no-helper] [--offline]
     python      运行 Python unittest (scripts/distribution + test_bridge_coverage.py)
     lint        运行 swiftformat --lint、swiftlint --strict 与 check-third-party.py
     doctor      检查本机工具链、Python 版本与平台测试范围
 
   快捷别名:
     core | metadata | bridge | kit    等同于 ./test.sh swift <pkg>
-    bridge-sdk | gpui                 等同于 ./test.sh rust <target>
+    bridge-sdk | maltoria-core | maltoria  等同于 ./test.sh rust <target>
 
   专项/平台测试:
     e2e         运行 WoW64 E2E 测试 (tests/e2e_runner.sh, 可传 --tier 1..4 / --verbose)
     live-wine   运行 macOS 真实 Wine 会话测试 (--wine-bin <path> [--prefix <p>] [--exe <e>])
-    linux-full  运行 Linux 完整验收脚本 (apps/whisky-gpui/tools/check-linux.sh)
+    linux-full  运行 Linux helper 验收脚本 (apps/maltoria/tools/check-linux.sh)
 
   手动交互测试:
-    gui         构建并启动 Maltoria GPUI (支持 --demo, --sandbox, --clean-sandbox, --no-wine, --release)
-    diag        运行 whisky-gpui 无头诊断 (status|runtime|library|config|folders|winetricks|programs|processes|launch|watch|raw)
+    gui         构建并启动 Maltoria (支持 --demo, --sandbox, --clean-sandbox, --no-wine, --release)
     cmd         构建并运行 macOS WhiskyCmd CLI (如: ./test.sh cmd list)
 EOF
 }
@@ -813,16 +749,14 @@ EOF
   ./test.sh all                       # 跑当前平台全量测试
   ./test.sh swift kit --filter WineEngine
   ./test.sh rust bridge-sdk           # 自动构建 whisky-bridge 并运行 --include-ignored 真实集成测试
-  ./test.sh gui --sandbox --no-wine   # 隔离配置/容器启动 GPUI 手动测自定义引擎 UI
-  ./test.sh gui --demo                # 用内置 32 款演示数据启动 GPUI
-  ./test.sh diag status               # 打印 bridge 状态 JSON
-  ./test.sh diag library              # 扫描并打印全部容器库 JSON
+  ./test.sh gui --sandbox --no-wine   # 隔离配置/容器启动应用手动测试
+  ./test.sh gui --demo                # 用内置演示数据启动应用
   ./test.sh cmd list                  # 使用当前分支代码构建并运行 WhiskyCmd list
 
 环境变量:
   WHISKY_TEST_FAIL_FAST=1             # 多步测试中任一步失败立即停止
   WHISKY_TEST_PYTHON=<path>           # 指定 Python (>=3.12) 用于 Swift 归档测试
-  WHISKY_TEST_SANDBOX=<dir>           # 自定义 gui/diag --sandbox 隔离目录
+  WHISKY_TEST_SANDBOX=<dir>           # 自定义 gui --sandbox 隔离目录
 EOF
 }
 
@@ -837,19 +771,18 @@ cmd_menu() {
         printf '────────────────────────────────────────────────────────\n'
         printf '  %s1.%s 本分支引擎专项回归 (engines)       [推荐·最快]\n' "$C_BOLD" "$C_RESET"
         printf '  %s2.%s 当前平台全量测试     (all)\n' "$C_BOLD" "$C_RESET"
-        printf '  %s3.%s GPUI Foundation 门禁 (foundation)\n' "$C_BOLD" "$C_RESET"
+        printf '  %s3.%s Foundation 门禁      (foundation)\n' "$C_BOLD" "$C_RESET"
         printf '  %s4.%s Swift 测试           (core/metadata/bridge/kit)\n' "$C_BOLD" "$C_RESET"
-        printf '  %s5.%s Rust 测试            (bridge-sdk + gpui)\n' "$C_BOLD" "$C_RESET"
+        printf '  %s5.%s Rust 测试            (bridge-sdk + core + maltoria)\n' "$C_BOLD" "$C_RESET"
         printf '  %s6.%s Python 单元测试      (python)\n' "$C_BOLD" "$C_RESET"
         printf '  %s7.%s 代码规范与清单校验   (lint)\n' "$C_BOLD" "$C_RESET"
         printf '  %s8.%s 环境依赖自检         (doctor)\n' "$C_BOLD" "$C_RESET"
         printf '  %s9.%s WoW64 E2E 测试       (e2e)\n' "$C_BOLD" "$C_RESET"
         printf ' %s10.%s 真实 Wine 会话测试   (live-wine, macOS)\n' "$C_BOLD" "$C_RESET"
-        printf ' %s11.%s Linux 完整验收       (linux-full, Linux)\n' "$C_BOLD" "$C_RESET"
+        printf ' %s11.%s Linux helper 验收    (linux-full, Linux)\n' "$C_BOLD" "$C_RESET"
         printf ' ── 手动交互入口 ───────────────────────────────────────\n'
-        printf ' %s12.%s 启动 GPUI 应用       (gui, 可选沙箱/Demo)\n' "$C_BOLD" "$C_RESET"
-        printf ' %s13.%s 无头桥接/库诊断      (diag)\n' "$C_BOLD" "$C_RESET"
-        printf ' %s14.%s 运行 WhiskyCmd CLI   (cmd, macOS)\n' "$C_BOLD" "$C_RESET"
+        printf ' %s12.%s 启动应用             (gui, 可选沙箱/Demo)\n' "$C_BOLD" "$C_RESET"
+        printf ' %s13.%s 运行 WhiskyCmd CLI   (cmd, macOS)\n' "$C_BOLD" "$C_RESET"
         printf '  %s0.%s 退出\n' "$C_BOLD" "$C_RESET"
 
         local choice=""
@@ -865,7 +798,7 @@ cmd_menu() {
             0) return 0 ;;
             1) cmd_engines || true ;;
             2) cmd_all || true ;;
-            3) run_step "GPUI Foundation 门禁" run_foundation; finish_steps || true ;;
+            3) run_step "Foundation 门禁" run_foundation; finish_steps || true ;;
             4)
                 local pkg="" flt=""
                 read -r -p "选择包 (all/core/metadata/bridge/kit) [all]: " pkg
@@ -879,7 +812,7 @@ cmd_menu() {
                 ;;
             5)
                 local rtarget=""
-                read -r -p "选择 Rust 目标 (all/bridge-sdk/gpui) [all]: " rtarget
+                read -r -p "选择 Rust 目标 (all/bridge-sdk/maltoria-core/maltoria) [all]: " rtarget
                 rtarget="${rtarget:-all}"
                 cmd_rust "$rtarget" || true
                 ;;
@@ -923,22 +856,6 @@ cmd_menu() {
                 esac
                 ;;
             13)
-                local dmode=""
-                read -r -p "诊断模式 (status/runtime/library/config/folders/programs/processes/launch) [status]: " dmode
-                dmode="${dmode:-status}"
-                if [[ "$dmode" == "launch" || "$dmode" == "config" || "$dmode" == "folders" || "$dmode" == "programs" || "$dmode" == "processes" ]]; then
-                    local dbottle=""
-                    read -r -p "容器名称或路径 (可留空): " dbottle
-                    if [[ -n "$dbottle" ]]; then
-                        (cmd_diag "$dmode" --bottle "$dbottle") || true
-                    else
-                        (cmd_diag "$dmode") || true
-                    fi
-                else
-                    (cmd_diag "$dmode") || true
-                fi
-                ;;
-            14)
                 local cargs=""
                 read -r -p "WhiskyCmd 参数 (如 list / shellenv <bottle>) [list]: " cargs
                 cargs="${cargs:-list}"
@@ -968,20 +885,19 @@ main() {
         all) cmd_all "$@" ;;
         engines) cmd_engines "$@" ;;
         foundation)
-            run_step "GPUI Foundation 门禁" run_foundation "$@"
+            run_step "Foundation 门禁" run_foundation "$@"
             finish_steps
             ;;
         swift) cmd_swift "$@" ;;
         core|metadata|bridge|kit) cmd_swift "$subcmd" "$@" ;;
         rust) cmd_rust "$@" ;;
-        bridge-sdk|gpui) cmd_rust "$subcmd" "$@" ;;
+        bridge-sdk|maltoria-core|maltoria) cmd_rust "$subcmd" "$@" ;;
         python) cmd_python "$@" ;;
         lint) cmd_lint "$@" ;;
         e2e) cmd_e2e "$@" ;;
         live-wine) cmd_live_wine "$@" ;;
         linux-full) cmd_linux_full "$@" ;;
         gui) cmd_gui "$@" ;;
-        diag) cmd_diag "$@" ;;
         cmd) cmd_cmd "$@" ;;
         *)
             log_err "未知命令: $subcmd"

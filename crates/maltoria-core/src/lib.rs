@@ -3,8 +3,7 @@
 //! configuration and program settings state, and the localized strings
 //! generated from `locales/*.toml`.
 //!
-//! The GPUI app (`apps/whisky-gpui`) and the Material app (`apps/maltoria`)
-//! both build on it.
+//! The Material app (`apps/maltoria`) builds on it.
 
 pub mod bridge;
 pub mod config;

@@ -232,8 +232,8 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-  gpui:
-    name: GPUI (macOS)
+  maltoria:
+    name: Maltoria (macOS)
     needs: [lint, format, localization, test, native-lunahook]
     if: >-
       ${{ !cancelled() &&
@@ -270,19 +270,19 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
-            apps/whisky-gpui/target/
+            apps/maltoria/target/
           # CI also compiles test-support/debug features. Save each revision
           # so a release-only cache cannot make every CI build start cold.
-          key: ${{ runner.os }}-${{ runner.arch }}-cargo-ci-v2-${{ hashFiles('apps/whisky-gpui/Cargo.lock') }}-${{ github.sha }}
+          key: ${{ runner.os }}-${{ runner.arch }}-cargo-ci-v2-${{ hashFiles('apps/maltoria/Cargo.lock') }}-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-${{ runner.arch }}-cargo-ci-v2-${{ hashFiles('apps/whisky-gpui/Cargo.lock') }}-
-            ${{ runner.os }}-cargo-${{ hashFiles('apps/whisky-gpui/Cargo.lock') }}
+            ${{ runner.os }}-${{ runner.arch }}-cargo-ci-v2-${{ hashFiles('apps/maltoria/Cargo.lock') }}-
+            ${{ runner.os }}-cargo-${{ hashFiles('apps/maltoria/Cargo.lock') }}
       - name: Run WhiskyBridge tests
         run: swift test --package-path WhiskyBridge
       - name: Run core tests
         run: cargo test --locked --manifest-path crates/maltoria-core/Cargo.toml
-      - name: Run GPUI tests
-        run: cargo test --locked --manifest-path apps/whisky-gpui/Cargo.toml
+      - name: Run Material app tests
+        run: cargo test --locked --manifest-path apps/maltoria/Cargo.toml
       - name: Download pinned LunaHook payloads
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         uses: actions/download-artifact@v4
@@ -290,7 +290,7 @@ jobs:
           pattern: Maltoria-LunaHook-*
           path: ${{ runner.temp }}/lunahook
           merge-multiple: true
-      - name: Verify GPUI app packaging
+      - name: Verify app packaging
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         env:
           APP_VERSION: ${{ steps.version.outputs.value }}
@@ -298,8 +298,8 @@ jobs:
           MALTORIA_REQUIRE_LUNAHOOK: '1'
         run: |
           ./build.sh run whisky-macos-gpui-arm64 --version "$APP_VERSION" \
-            --build-number "$GITHUB_RUN_NUMBER" --output build/ci-gpui
-          app=build/ci-gpui/artifacts/Maltoria.app
+            --build-number "$GITHUB_RUN_NUMBER" --output build/ci-app
+          app=build/ci-app/artifacts/Maltoria.app
           test -x "$app/Contents/MacOS/maltoria"
           for res in whisky-bridge winetricks verbs.txt cabextract WhiskyKit_WhiskyKit.bundle WhiskyCore_WhiskyCore.bundle; do
             test -e "$app/Contents/Resources/$res" || { echo "Missing resource: $res"; exit 1; }
@@ -311,7 +311,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: macos-arm64-${{ steps.version.outputs.value }}
-          path: build/ci-gpui/packages/*
+          path: build/ci-app/packages/*
           if-no-files-found: error
           compression-level: 0
           retention-days: 7

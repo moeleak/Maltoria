@@ -113,14 +113,16 @@ jobs:
       - name: Verify source behavior for standalone release builds
         if: inputs.run_tests
         run: |
-          python3 scripts/check-gpui-foundation.py --swift-only --output /tmp/linux-release-checks
-          cargo test --release --locked --jobs 4 --manifest-path apps/whisky-gpui/Cargo.toml \
-            --target-dir "$WHISKY_LINUX_BUILD_CACHE/rust-build"
+          python3 scripts/check-foundation.py --swift-only --output /tmp/linux-release-checks
+          for manifest in crates/maltoria-core/Cargo.toml apps/maltoria/Cargo.toml; do
+            cargo test --release --locked --jobs 4 --manifest-path "$manifest" \
+              --target-dir "$WHISKY_LINUX_BUILD_CACHE/rust-build"
+          done
           python3 -m unittest discover -s scripts/distribution -p 'test_*.py' -v
       - name: Preserve the reusable release archive
         uses: actions/upload-artifact@v7.0.2
         with:
-          name: linux-gpui-release
+          name: linux-release
           path: /tmp/linux-release-task/artifacts/maltoria-linux-*.tar.gz
           compression-level: 0
           if-no-files-found: error
@@ -153,7 +155,7 @@ jobs:
           persist-credentials: false
       - uses: actions/download-artifact@v8
         with:
-          name: linux-gpui-release
+          name: linux-release
           path: input
       - name: Cache checksum-pinned AppImage tools
         uses: actions/cache@v4
@@ -256,7 +258,7 @@ jobs:
           for name in ('package-smoke.Dockerfile', 'smoke-format.py'):
               shutil.copyfile(pathlib.Path('scripts/distribution') / name, context / name)
           for name in ('check-linux-wine-update.py', 'check-diagnostics.py'):
-              shutil.copyfile(pathlib.Path('apps/whisky-gpui/tools') / name, context / name)
+              shutil.copyfile(pathlib.Path('apps/maltoria/tools') / name, context / name)
           shutil.copyfile('scripts/stage-lunahook-payload.py', context / 'stage-lunahook-payload.py')
           PY
       - name: Install with the distro package manager

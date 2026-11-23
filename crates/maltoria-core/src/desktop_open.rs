@@ -36,7 +36,7 @@ pub fn parse(arguments: &[String]) -> Result<Option<ExternalOpen>, &'static str>
         }
         _ => {
             return Err(
-                "usage: whisky-gpui [<file> | --open-file <file> [--container <path> | --container-id <id>]]",
+                "usage: maltoria [<file> | --open-file <file> [--container <path> | --container-id <id>]]",
             );
         }
     };

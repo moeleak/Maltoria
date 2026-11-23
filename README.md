@@ -95,7 +95,7 @@ Maltoria 得以实现，离不开以下优秀开源项目、协议标准与社�
 #### 上游项目与桌面框架 (Upstream & UI Framework)
 
 - **[Whisky](https://github.com/whisky-app/whisky)**（[Isaac Marovitz](https://github.com/IsaacMarovitz)）& **[frankea/Whisky](https://github.com/frankea/Whisky)**（`GPL-3.0-or-later`）— 酒瓶管理、配置模型与原生桥接基础（Bottle management, configuration model, and native bridge foundation）。
-- **[gpui-kit](https://crates.io/crates/gpui-kit)** / **[Zed GPUI](https://github.com/zed-industries/zed)**（`Apache-2.0`）— 驱动 `whisky-gpui` 跨平台 GPU 加速原生界面的桌面 UI 框架（Cross-platform GPU-accelerated desktop UI framework powering `apps/whisky-gpui`）。
+- **[iced](https://github.com/iced-rs/iced)**（`MIT`）& **[material-ui-rs](https://github.com/moeleak/material-ui-rs)**（`MIT`）— 驱动 `apps/maltoria` Material 3 跨平台桌面界面的 UI 框架与组件库（Cross-platform GUI toolkit and Material 3 widgets powering `apps/maltoria`）。
 
 #### 实时文本捕获与翻译生态 (Text Hooking & Translation Pipeline)
 

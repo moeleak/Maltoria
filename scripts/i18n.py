@@ -23,7 +23,6 @@ LOCALES = CORE / "locales"
 # The Rust sources that read the strings: the core and each app.
 SRC_ROOTS = (
     CORE / "src",
-    ROOT / "apps" / "whisky-gpui" / "src",
     ROOT / "apps" / "maltoria" / "src",
 )
 SWIFT_SRC = ROOT / "WhiskyBridge" / "Sources"

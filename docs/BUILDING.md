@@ -20,7 +20,7 @@
 
 | 名称 | 主机 / 产物 |
 | --- | --- |
-| `whisky-macos-gpui-arm64` | Apple Silicon + Swift/Rust；GPUI 开发 `.app`，指定版本时附带 ad-hoc ZIP 与源码包 |
+| `whisky-macos-gpui-arm64` | Apple Silicon + Swift/Rust；Material 3 应用（`apps/maltoria`）开发 `.app`，指定版本时附带 ad-hoc ZIP 与源码包 |
 | `whisky-linux-amd64` | Ubuntu 24.04 amd64 或 Docker；Release tar.gz / deb / rpm / AppImage、源码与许可材料 |
 | `wine-macos-arm64` | macOS 27+ Apple Silicon、Rosetta、CMake/pkg-config；x86_64 Libraries 与源码包 |
 | `wine-linux-amd64` | Ubuntu 24.04 amd64 或 Docker；new WoW64 runner 与源码包 |
@@ -43,10 +43,8 @@ python3 apps/maltoria/tools/build-linux-upscaler.py \
   --output /tmp/whisky-upscaler --cache "$HOME/.cache/whisky-upscaler" --jobs 4
 ```
 
-离线构建可复用该缓存中的已校验源码归档。开发调试时可用绝对路径设置
-`WHISKY_REALCUGAN_HELPER` 与 `WHISKY_REALCUGAN_MODELS`；模型目录名必须为 `models-se`。
-自动模式优先尝试 Vulkan，失败时本次任务最多回退 CPU 一次；CPU 模式通常更慢。
-图形驱动、Vulkan 实现和输入图像会影响速度与观感；打包验收不代表所有 GPU 上的画质一致。
+离线构建可复用该缓存中的已校验源码归档。封面超分原由 GPUI 界面调用；
+Material 应用目前不做封面超分，该 payload 仍随发行包打包。
 
 ```bash
 ./build.sh doctor whisky-linux-amd64
@@ -67,8 +65,8 @@ Docker 任务将内部构建记录放在 `<output>/task/`，最终应用位于 `
 `build/distribution-cache/docker/`。首次构建会下载基础镜像和工具链。
 
 打包后生成 `elf-abi.json`，检查 GLIBC 2.39 上限。该检查与发行版和图形运行验收分别记录。
-完整干净运行时验收沿用 `check-linux-package.py` / `linux-runtime.Dockerfile`；
-它要求独立的普通用户运行时容器，CI 的 Portability 工作流提供该门槛。
+安装包在干净容器中的安装与窗口验收由 `LinuxDistribution.yml` 的 smoke 任务执行；
+`./test.sh linux-full`（`apps/maltoria/tools/check-linux.sh`）在本机对真实 helper 运行 Linux 验收。
 
 ## Wine
 

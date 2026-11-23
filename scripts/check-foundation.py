@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Repeatable isolated compatibility gate for the GPUI migration foundation."""
+"""Repeatable isolated gate for the shared foundation: Swift packages, helper and Rust bridge SDK."""
 import argparse
 import json
 import os
@@ -15,7 +15,7 @@ from bridge_coverage import export_bridge_coverage
 
 root = Path(__file__).resolve().parents[1]
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument('--output', type=Path, default=root / 'build/portability/gpui-foundation')
+parser.add_argument('--output', type=Path, default=root / 'build/portability/foundation')
 parser.add_argument('--swift-only', action='store_true')
 parser.add_argument('--offline', action='store_true',
                     help='Require cached SwiftPM and Cargo dependencies')
@@ -58,7 +58,7 @@ check('core', ['swift', 'test', '--package-path', str(root / 'WhiskyCore'),
 check('metadata', ['swift', 'test', '--package-path', str(root / 'WhiskyMetadata'),
                    '--scratch-path', str(output / 'metadata-build')]
       + swift_build_flags + swift_resolution_flags)
-with tempfile.TemporaryDirectory(prefix='whisky-gpui-gate-') as temporary:
+with tempfile.TemporaryDirectory(prefix='whisky-foundation-gate-') as temporary:
     bridge = root / 'WhiskyBridge'
     if platform.system() == 'Linux':
         # A platform-specific lock graph is resolved in an isolated copy.

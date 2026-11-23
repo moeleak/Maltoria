@@ -36,17 +36,19 @@ Apache-2.0 attribution; the Apache text is supplied in `swift-argument-parser.tx
 
 `SemanticVersion`, `Sparkle`, `PostHog`, `swift-argument-parser`, and
 `swift-docc-*` are pinned SwiftPM dependencies in `WhiskyKit`/`WhiskyCmd`,
-whereas the desktop GPUI application (`apps/whisky-gpui`) uses Rust +
+whereas the desktop application (`apps/maltoria`) uses Rust +
 `WhiskyBridge`.
 
 ## Desktop UI and Rust dependencies
 
-- **`gpui-kit` 0.8.0** — <https://crates.io/crates/gpui-kit>; Apache-2.0, derived
-  from Zed's GPUI (<https://github.com/zed-industries/zed>). Provides the native
-  desktop UI framework for `apps/whisky-gpui`.
+- **`iced` 0.14.0** — <https://github.com/iced-rs/iced>; MIT. Provides the
+  cross-platform GUI toolkit for `apps/maltoria`.
+- **`material-ui-rs`** — <https://github.com/moeleak/material-ui-rs>; MIT. The
+  Material 3 widgets and theme built on `iced`, a git dependency whose commit
+  is pinned in `apps/maltoria/Cargo.lock`.
 - **Locked Rust crate dependencies** — All direct and transitive Rust crate
-  dependencies are pinned in `apps/whisky-gpui/Cargo.lock` (`chrono`, `image`,
-  `metal` on macOS, `serde`, `serde_json`, `sha2`, `smol`, `uuid`, and their
+  dependencies are pinned in `apps/maltoria/Cargo.lock` (`chrono`, `iced`,
+  `image`, `material-ui-rs`, `serde`, `serde_json`, `sha2`, `smol`, and their
   transitive crates). Linux distribution archives also ship individual crate
   licenses in `share/licenses/whisky/crates/` alongside
   `share/whisky/dependencies.json` and locked `.crate` archives in
@@ -87,16 +89,6 @@ whereas the desktop GPUI application (`apps/whisky-gpui`) uses Rust +
 <https://github.com/swiftlang/swift-docc-symbolkit>. Their Apache-2.0 texts and
 Swift Runtime Library Exception, where supplied upstream, are preserved in
 `swift-docc-plugin.txt` and `swift-docc-symbolkit.txt`.
-
-## Bundled shader source
-
-- **Anime4K CNN x2 S** — <https://github.com/bloc97/Anime4K>; MIT, copyright
-  2019–2021 bloc97; full text in `Anime4K.txt`. The GPUI library's cover
-  upscaler (`apps/whisky-gpui/src/upscale/anime4k.metal`) is that network's four
-  convolutions and its depth-to-space pass, translated to Metal by this fork's
-  sibling Wine repository and kept verbatim, licence header included. Weights
-  are part of the shader; no model file is distributed. `anime4k.rs` supplies the
-  dispatch code written for this application.
 
 ## Bundled model weights
 

@@ -7,7 +7,7 @@ Thanks for your interest! First, make a fork of Maltoria, create a new branch fo
 CI builds on `macos-26` runners using the runner's `latest-stable` Xcode (see `XCODE_VERSION` in `.github/workflows/CI.yml`). The bundled Wine runtime requires **macOS 27 or later** at run time (see [README](README.md#系统要求-system-requirements)). To build:
 
 - **Swift toolchain** — the one shipped with the CI Xcode release; all Swift dependencies come through Swift Package Manager.
-- **Rust ≥ 1.89** — `apps/whisky-gpui` uses file locking from the Rust standard library. Install via [rustup](https://rustup.rs/).
+- **Rust ≥ 1.89** — `crates/maltoria-core` uses file locking from the Rust standard library. Install via [rustup](https://rustup.rs/).
 - **Python 3.9+** — `build.sh` and the packaging scripts under `scripts/distribution/` are Python.
 - **SwiftLint** — enforced with `--strict` in CI (`norio-nomura/action-swiftlint`).
 - **SwiftFormat 0.58.7** — see below for the pin.
@@ -74,7 +74,7 @@ chmod +x .git/hooks/pre-commit
 
 ## Localization
 
-User-facing strings are maintained within the application frontend (`apps/whisky-gpui`). The legacy SwiftUI string catalog (`Whisky/Localizable.xcstrings`) has been deprecated and removed.
+User-facing strings are maintained in the shared core (`crates/maltoria-core`) and shown by the Material app (`apps/maltoria`). The legacy SwiftUI string catalog (`Whisky/Localizable.xcstrings`) has been deprecated and removed.
 
 UI strings live in `crates/maltoria-core/locales/{en,zh-Hans,ja,ko,fr,es,it,de,ru}.toml` — one TOML file per locale, one top-level table per UI section. `build.rs` compiles them into the `s()` string tables at build time; `src/i18n/fmt.rs` holds composition logic only — all text goes in the TOML files. **`en.toml` is the reference locale**: every other file must define the same sections, keys, array lengths, placeholder sets and plural categories; a mismatch is a build error.
 
@@ -163,11 +163,12 @@ swift test --package-path WhiskyCore
 swift test --package-path WhiskyMetadata
 ```
 
-**WhiskyBridge and GPUI tests** — exercise the shared application service and macOS frontend:
+**WhiskyBridge, core and app tests** — exercise the shared application service, the Rust core and the Material app:
 
 ```bash
 swift test --package-path WhiskyBridge
-cargo test --locked --manifest-path apps/whisky-gpui/Cargo.toml
+cargo test --locked --manifest-path crates/maltoria-core/Cargo.toml
+cargo test --locked --manifest-path apps/maltoria/Cargo.toml
 ./build.sh run whisky-macos-gpui-arm64
 ```
 
@@ -198,9 +199,10 @@ swift test --package-path WhiskyKit
 swift test --package-path WhiskyCore
 swift test --package-path WhiskyMetadata
 
-# Test and package the GPUI application
+# Test and package the application
 swift test --package-path WhiskyBridge
-cargo test --locked --manifest-path apps/whisky-gpui/Cargo.toml
+cargo test --locked --manifest-path crates/maltoria-core/Cargo.toml
+cargo test --locked --manifest-path apps/maltoria/Cargo.toml
 ./build.sh run whisky-macos-gpui-arm64
 
 # Check formatting
@@ -214,7 +216,7 @@ Once your pull request passes CI checks (SwiftLint, SwiftFormat, and builds), it
 ### Review Checklist
 
 - [ ] All tests pass (`swift test --package-path WhiskyKit`, `WhiskyCore`, `WhiskyMetadata`, `WhiskyBridge`)
-- [ ] GPUI packaging succeeds (`./build.sh run whisky-macos-gpui-arm64`)
+- [ ] App packaging succeeds (`./build.sh run whisky-macos-gpui-arm64`)
 - [ ] SwiftFormat clean (`swiftformat --lint .`)
 - [ ] SwiftLint clean (`swiftlint lint --strict`)
 - [ ] Documentation updated (if adding features)

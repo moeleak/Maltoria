@@ -6,23 +6,14 @@
 cargo test --locked --manifest-path crates/maltoria-core/Cargo.toml
 ```
 
-The GUI-independent half of the apps: the helper bridge and its supervisor,
+The GUI-independent half of the app: the helper bridge and its supervisor,
 the library model, runtime, configuration and program settings state, and the
 localized strings. `build.rs` compiles `locales/*.toml` into the i18n string
-tables. Helpers the apps' tests need (`BridgeSupervisor::recording_for_tests`,
-`LocaleGuard`, …) are behind the `test-support` feature, which the apps enable
-for their dev-dependencies; gate such items with
-`#[cfg(any(test, feature = "test-support"))]`.
-
-## GPUI app (`apps/whisky-gpui`)
-
-```bash
-cargo check --locked --manifest-path apps/whisky-gpui/Cargo.toml
-cargo test --locked --manifest-path apps/whisky-gpui/Cargo.toml
-```
-
-Standalone Cargo package (own `Cargo.lock`, exact `=` pinned deps). It uses the
-core's modules under their old paths (`crate::bridge`, `crate::i18n`, …).
+tables. Helpers the app's tests need (`BridgeSupervisor::recording_for_tests`,
+`LocaleGuard`, …) are behind the `test-support` feature, which the app enables
+for its dev-dependencies; gate such items with
+`#[cfg(any(test, feature = "test-support"))]`. The demo library's covers are in
+`assets/`.
 
 ## Material app (`apps/maltoria`)
 
@@ -38,6 +29,11 @@ time, and settings. Every game lives in one container — the one remembered in
 runtime is installed. Keep a widget's position in the tree stable when a
 message it sends changes the view (see `library::view`): moving it resets the
 state of everything inside, such as an open context menu.
+
+Standalone Cargo package with its own `Cargo.lock`. `tools/` holds the release
+packaging (`package-app.sh` for macOS, `build-linux-release.sh` and
+`package-linux.py` for Linux, driven by `./build.sh`) and the Linux helper
+acceptance checks (`check-linux.sh`, run by `./test.sh linux-full`).
 
 ## i18n
 
@@ -97,6 +93,6 @@ Localization section of `CONTRIBUTING.md`.
   validation), then `python3 scripts/i18n.py check` (must be 0 errors, 0
   warnings) before considering the change done.
 - `i18n.py find <visible text>` locates the key for a string seen in the UI.
-- Linux-gated files (`linux_hud.rs`, `upscale/linux.rs`, `linux_overlay.rs`)
-  do not compile on macOS hosts — keep edits there mechanical and grep-verify
-  referenced keys exist in `en.toml`.
+- Platform-gated code (`#[cfg(target_os = ...)]`) does not compile on other
+  hosts — keep edits there mechanical and grep-verify referenced keys exist in
+  `en.toml`.

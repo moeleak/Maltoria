@@ -100,7 +100,7 @@ def copy_sources(output, target):
     destination.mkdir(parents=True)
     paths = command('git', '-C', ROOT, 'ls-files', '--cached', '--others', '--exclude-standard', '--',
                     'LICENSE', 'THIRD-PARTY-NOTICES.md', 'WhiskyCore', 'WhiskyMetadata', 'WhiskyBridge', 'WhiskyTranslation', 'crates', 'apps/maltoria',
-                    'scripts/check-gpui-foundation.py', 'build.sh', 'scripts/distribution',
+                    'scripts/check-foundation.py', 'build.sh', 'scripts/distribution',
                     'docs/BUILDING.md', 'docs/DistributionStrategy.md').splitlines()
     with tarfile.open(destination / 'application.tar.gz', 'w:gz') as archive:
         for relative in sorted(set(paths)):

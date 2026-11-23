@@ -4,9 +4,6 @@
 //! Search results never write storage. Linking a result stages its platform
 //! ID in the draft; only saving it (`metadata.configuration.save`) commits the
 //! links, and the helper then fetches the linked works' details.
-//!
-//! The GPUI app keeps its own copy of this logic next to its input widgets, in
-//! `apps/whisky-gpui/src/metadata_editor.rs`.
 
 use std::sync::atomic::{AtomicU64, Ordering};
 

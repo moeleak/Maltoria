@@ -1,8 +1,9 @@
 //! View models: live bridge entries and the demo snapshot used for design work.
 //!
 //! `Game` is owned because live library entries come from the bridge. The demo
-//! snapshot is still compiled in and is selected with `WHISKY_GPUI_DEMO_DATA=1`;
-//! regenerate its artwork with tools/import_whisky_artwork.py.
+//! snapshot is still compiled in; the Material app selects it with `--demo` or
+//! `MALTORIA_DEMO=1`. Its artwork is in `assets/`, drawn by
+//! `tools/generate_covers.py`.
 use std::path::PathBuf;
 use std::sync::OnceLock;
 
@@ -176,7 +177,7 @@ impl Game {
     }
 }
 
-/// The bundled design snapshot. Only `WHISKY_GPUI_DEMO_DATA=1` uses it.
+/// The bundled design snapshot, used only in demo mode.
 struct DemoGame {
     art: &'static str,
     title: &'static str,
@@ -230,7 +231,7 @@ pub fn demo_bottles() -> Vec<BottleVm> {
         .collect()
 }
 
-/// The design snapshot, selected by `WHISKY_GPUI_DEMO_DATA=1`.
+/// The design snapshot, for demo mode.
 pub fn demo_data() -> &'static [Game] {
     static DEMO: OnceLock<Vec<Game>> = OnceLock::new();
     DEMO.get_or_init(|| {

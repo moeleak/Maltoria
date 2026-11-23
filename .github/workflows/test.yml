@@ -13,8 +13,8 @@ permissions:
   contents: read
 
 jobs:
-  macos-gpui-core:
-    name: macOS 26 - Foundation, Coverage & GPUI
+  macos-core:
+    name: macOS 26 - Foundation, Coverage & Material app
     runs-on: macos-26
     timeout-minutes: 60
     steps:
@@ -45,8 +45,8 @@ jobs:
           python3 -m unittest discover -s scripts -p 'test_i18n.py' -v
           python3 scripts/i18n.py check
 
-      - name: GPUI Foundation Gate (Swift + real helper + coverage)
-        run: python3 scripts/check-gpui-foundation.py --coverage --output build/reliability/foundation
+      - name: Foundation Gate (Swift + real helper + coverage)
+        run: python3 scripts/check-foundation.py --coverage --output build/reliability/foundation
         env:
           LC_ALL: en_US.UTF-8
 
@@ -60,12 +60,12 @@ jobs:
           print(f"WHISKY_BRIDGE_HELPER={report['helper']}")
           PY
 
-      - name: GPUI app coverage (lcov)
+      - name: Material app coverage (lcov)
         run: |
           set -euo pipefail
-          cargo llvm-cov --locked --manifest-path apps/whisky-gpui/Cargo.toml \
-            --lcov --output-path build/reliability/gpui.lcov
-          test -s build/reliability/gpui.lcov
+          cargo llvm-cov --locked --manifest-path apps/maltoria/Cargo.toml \
+            --lcov --output-path build/reliability/maltoria.lcov
+          test -s build/reliability/maltoria.lcov
 
       - name: Bridge SDK coverage (lcov, incl. real-helper test)
         run: |
@@ -90,11 +90,11 @@ jobs:
             --lcov --output-path build/reliability/bridge-sdk.lcov -- --include-ignored
           test -s build/reliability/bridge-sdk.lcov
 
-      - name: Upload GPUI coverage
+      - name: Upload Material app coverage
         uses: codecov/codecov-action@v5
         with:
-          files: build/reliability/gpui.lcov
-          flags: gpui
+          files: build/reliability/maltoria.lcov
+          flags: maltoria
           disable_search: true
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -130,8 +130,8 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-  linux-release-acceptance:
-    name: Ubuntu 24.04 - Foundation, X11/Wayland Acceptance
+  linux-release:
+    name: Ubuntu 24.04 - Foundation & Release Bundle
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
@@ -162,8 +162,8 @@ jobs:
       - name: Run WhiskyTranslation tests
         run: swift test --package-path WhiskyTranslation
 
-      - name: GPUI Foundation Gate (Swift + Bridge SDK + real helper)
-        run: python3 scripts/check-gpui-foundation.py --output build/reliability/foundation-linux
+      - name: Foundation Gate (Swift + Bridge SDK + real helper)
+        run: python3 scripts/check-foundation.py --output build/reliability/foundation-linux
 
       - name: Export bridge helper path
         run: |
@@ -178,12 +178,11 @@ jobs:
       - name: Core tests
         run: cargo test --locked --manifest-path crates/maltoria-core/Cargo.toml
 
-      - name: GPUI app tests under Xvfb (software GL)
+      - name: Material app tests
         run: |
           set -euo pipefail
-          LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a \
-            cargo test --locked --manifest-path apps/whisky-gpui/Cargo.toml 2>&1 | \
-            tee build/reliability/xvfb-cargo-test.log
+          cargo test --locked --manifest-path apps/maltoria/Cargo.toml 2>&1 | \
+            tee build/reliability/maltoria-cargo-test.log
 
       - name: Build release tarball via unified build entry
         run: |
@@ -204,63 +203,6 @@ jobs:
           test -x "$BUNDLE_ROOT/Maltoria" || { echo "missing executable launcher $BUNDLE_ROOT/Maltoria"; exit 1; }
           test -x "$BUNDLE_ROOT/bin/maltoria" || { echo "missing executable $BUNDLE_ROOT/bin/maltoria"; exit 1; }
           test -x "$BUNDLE_ROOT/bin/whisky-bridge" || { echo "missing executable $BUNDLE_ROOT/bin/whisky-bridge"; exit 1; }
-          echo "BUNDLE_ROOT=$BUNDLE_ROOT" >> "$GITHUB_ENV"
-
-      - name: Build acceptance Docker images
-        run: |
-          set -euo pipefail
-          docker build -f apps/whisky-gpui/tools/linux-runtime.Dockerfile \
-            --target acceptance -t whisky-acceptance apps/whisky-gpui/tools 2>&1 | \
-            tee build/reliability/docker-acceptance-build.log
-          docker build -f apps/whisky-gpui/tools/linux-runtime.Dockerfile \
-            --target wayland-acceptance -t whisky-wayland-acceptance apps/whisky-gpui/tools 2>&1 | \
-            tee build/reliability/docker-wayland-build.log
-
-      - name: X11 smoke inside acceptance container
-        run: |
-          set -euo pipefail
-          mkdir -p build/reliability/evidence-x11
-          sudo chown -R 10001:10001 build/reliability/evidence-x11
-          docker run --rm --network none \
-            --user 10001:10001 \
-            -e HOME=/home/whisky-test \
-            -v "$(pwd):/repo:ro" \
-            -v "$BUNDLE_ROOT:/bundle:ro" \
-            -v "$(pwd)/build/reliability/evidence-x11:/evidence:rw" \
-            -w /repo \
-            whisky-acceptance \
-            dbus-run-session -- xvfb-run -a python3 \
-              apps/whisky-gpui/tools/smoke-linux.py \
-              --binary /bundle/Maltoria \
-              --helper /bundle/bin/whisky-bridge \
-              --output /evidence --scenario empty 2>&1 | \
-            tee build/reliability/smoke-x11.log
-
-      - name: Wayland smoke inside acceptance container
-        run: |
-          set -euo pipefail
-          mkdir -p build/reliability/evidence-wayland
-          sudo chown -R 10001:10001 build/reliability/evidence-wayland
-          docker run --rm --network none \
-            --user 10001:10001 \
-            -e HOME=/home/whisky-test \
-            -v "$(pwd):/repo:ro" \
-            -v "$BUNDLE_ROOT:/bundle:ro" \
-            -v "$(pwd)/build/reliability/evidence-wayland:/evidence:rw" \
-            -w /repo \
-            whisky-wayland-acceptance \
-            dbus-run-session -- python3 \
-              apps/whisky-gpui/tools/smoke-wayland.py \
-              --bundle /bundle \
-              --output /evidence 2>&1 | \
-            tee build/reliability/smoke-wayland.log
-
-      - name: Normalize evidence permissions
-        # The containers write fixture-* directories mode 0700 as their own
-        # uid; the artifact upload runs as the runner user and cannot scan
-        # them otherwise.
-        if: always()
-        run: sudo chmod -R a+rX build/reliability/evidence-x11 build/reliability/evidence-wayland || true
 
       - name: Upload raw logs and evidence
         if: always()
@@ -272,6 +214,5 @@ jobs:
             build/reliability/**/*.lcov
             build/reliability/**/report.json
             build/reliability/**/build-report.json
-            build/reliability/evidence-*/**
           if-no-files-found: ignore
           retention-days: 7

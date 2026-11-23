@@ -144,7 +144,7 @@ mod launcher_tests {
         let mount = directory.join("mount/usr/bin");
         std::fs::create_dir_all(&mount).unwrap();
         let image = directory.join("Maltoria 包.AppImage");
-        let binary = mount.join("whisky-gpui");
+        let binary = mount.join("maltoria");
         let unrelated = directory.join("native");
         for file in [&image, &binary, &unrelated] {
             std::fs::write(file, b"fixture").unwrap();
