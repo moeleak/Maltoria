@@ -129,6 +129,27 @@ def assert_success(peer, request_id, session):
     return response
 
 
+def attach_after_release(connection, peer, session, request_id, target, timeout=10):
+    """Attach to a target an earlier helper hooked.
+
+    The hook in the target unloads on its own once that helper is gone, so it
+    may still be in place for a moment: wait for it to go, but not forever.
+    """
+    deadline = time.monotonic() + timeout
+    attempt = 0
+    while True:
+        attempt_id = request_id if attempt == 0 else f"{request_id}-{attempt}"
+        send_command(connection, "attach", attempt_id, session, params={"target": target})
+        response = peer.response(attempt_id, session)
+        if response.get("ok") is True:
+            return response
+        code = response.get("error", {}).get("code")
+        if code != "already_hooked" or time.monotonic() >= deadline:
+            raise AssertionError(f"command failed: {code}")
+        attempt += 1
+        time.sleep(0.1)
+
+
 def close_fixture(process):
     window = fixture_window()
     if window:
@@ -226,8 +247,7 @@ def run(host, fixture, architecture):
                 raise AssertionError("fixture was terminated when the helper shut down")
 
             process, connection, peer, token, session = start_host(host, server, architecture)
-            send_command(connection, "attach", "attach-eof", session, params={"target": fixture_record})
-            assert_success(peer, "attach-eof", session)
+            attach_after_release(connection, peer, session, "attach-eof", fixture_record)
             connection.close()
             finish_host(process, token)
             if fixture_process.poll() is not None:
@@ -235,8 +255,7 @@ def run(host, fixture, architecture):
 
             # A fresh helper must be able to attach after EOF released our hook.
             process, connection, peer, token, session = start_host(host, server, architecture)
-            send_command(connection, "attach", "attach-exit", session, params={"target": fixture_record})
-            assert_success(peer, "attach-exit", session)
+            attach_after_release(connection, peer, session, "attach-exit", fixture_record)
             close_fixture(fixture_process)
             deadline = time.monotonic() + 10
             disconnected = False
