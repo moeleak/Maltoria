@@ -1,46 +1,46 @@
 #!/usr/bin/env bash
-# Package dist/Maltoria.app from the release builds of whisky-gpui and whisky-bridge.
+# Package dist/Maltoria.app from the release builds of maltoria and whisky-bridge.
 #
 # Layout:
-#   dist/Maltoria.app/Contents/MacOS/whisky-gpui
+#   dist/Maltoria.app/Contents/MacOS/maltoria
 #   dist/Maltoria.app/Contents/Resources/whisky-bridge
 #   dist/Maltoria.app/Contents/Resources/AppIcon.icns
 #   dist/Maltoria.app/Contents/Info.plist
-#   (product branding: Maltoria; binary names keep the whisky-* namespace)
+#   (product branding: Maltoria; the helper binaries keep the whisky-* namespace)
 #
 # The helper lives at Contents/Resources/whisky-bridge because that is where
-# locate_helper() (apps/whisky-gpui/src/bridge/supervisor.rs) looks first,
+# locate_helper() (crates/maltoria-core/src/bridge/supervisor.rs) looks first,
 # relative to the executable.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 
-APP_DIR="${WHISKY_GPUI_APP_DIR:-${REPO_ROOT}/dist/Maltoria.app}"
+APP_DIR="${MALTORIA_APP_DIR:-${REPO_ROOT}/dist/Maltoria.app}"
 CONTENTS="${APP_DIR}/Contents"
-ICONSET_SRC="${REPO_ROOT}/apps/whisky-gpui/resources/AppIcon.appiconset"
+ICONSET_SRC="${REPO_ROOT}/apps/maltoria/resources/AppIcon.appiconset"
 
 # Preserve previous artifacts before starting an expensive compilation.
 if [[ -e "${APP_DIR}" || -L "${APP_DIR}" ]]; then
-    echo "Choose a fresh WHISKY_GPUI_APP_DIR: ${APP_DIR}" >&2
+    echo "Choose a fresh MALTORIA_APP_DIR: ${APP_DIR}" >&2
     exit 1
 fi
 
-# Release builds: Swift helper first, then the GPUI binary.
+# Release builds: Swift helper first, then the Material app.
 swift build --package-path "${REPO_ROOT}/WhiskyBridge" -c release --jobs "${WHISKY_BUILD_JOBS:-4}"
 cargo_options=(--locked --release --jobs "${WHISKY_BUILD_JOBS:-4}")
 if [[ "${WHISKY_BUILD_OFFLINE:-0}" == 1 ]]; then cargo_options+=(--offline); fi
 env RUSTC_WRAPPER= cargo build "${cargo_options[@]}" \
-    --manifest-path "${REPO_ROOT}/apps/whisky-gpui/Cargo.toml"
+    --manifest-path "${REPO_ROOT}/apps/maltoria/Cargo.toml"
 
 HELPER_BIN="${REPO_ROOT}/WhiskyBridge/.build/release/whisky-bridge"
-GPUI_BIN="${REPO_ROOT}/apps/whisky-gpui/target/release/whisky-gpui"
+APP_BIN="${REPO_ROOT}/apps/maltoria/target/release/maltoria"
 test -x "${HELPER_BIN}"
-test -x "${GPUI_BIN}"
+test -x "${APP_BIN}"
 
 # Assemble into the fresh destination.
 mkdir -p "${CONTENTS}/MacOS" "${CONTENTS}/Resources"
-cp "${GPUI_BIN}" "${CONTENTS}/MacOS/whisky-gpui"
+cp "${APP_BIN}" "${CONTENTS}/MacOS/maltoria"
 cp "${HELPER_BIN}" "${CONTENTS}/Resources/whisky-bridge"
 # Winetricks resolves these beside its executable. They are runtime tools, not
 # SwiftPM resources, so the helper build does not carry them.
@@ -50,7 +50,7 @@ done
 cp "${REPO_ROOT}/Libraries/WhiskyAudioTest.exe" "${CONTENTS}/Resources/WhiskyAudioTest.exe"
 cp -R "${REPO_ROOT}/WhiskyBridge/.build/release/WhiskyKit_WhiskyKit.bundle" \
     "${CONTENTS}/Resources/WhiskyKit_WhiskyKit.bundle"
-chmod +x "${CONTENTS}/MacOS/whisky-gpui" "${CONTENTS}/Resources/whisky-bridge" \
+chmod +x "${CONTENTS}/MacOS/maltoria" "${CONTENTS}/Resources/whisky-bridge" \
     "${CONTENTS}/Resources/cabextract" "${CONTENTS}/Resources/winetricks"
 
 cp -R "${REPO_ROOT}/WhiskyBridge/.build/release/WhiskyCore_WhiskyCore.bundle" \
@@ -60,7 +60,7 @@ cp -R "${REPO_ROOT}/WhiskyBridge/.build/release/WhiskyCore_WhiskyCore.bundle" \
 # loads. Both live beside the bridge so the app can find them relative to its
 # own executable. The .mlpackage is the source; coremlcompiler turns it into the
 # .mlmodelc Core ML actually opens.
-UPSCALE_SRC="${REPO_ROOT}/apps/whisky-gpui/tools/realcugan-helper"
+UPSCALE_SRC="${REPO_ROOT}/apps/maltoria/tools/realcugan-helper"
 if [[ -d "${UPSCALE_SRC}" ]]; then
     xcrun swiftc -O "${UPSCALE_SRC}/main.swift" -o "${CONTENTS}/Resources/realcugan-helper"
     mkdir -p "${CONTENTS}/Resources/coreml"
@@ -91,7 +91,7 @@ else
 fi
 
 # Defaults for local builds; release workflows supply their own version and build number.
-source "${REPO_ROOT}/apps/whisky-gpui/version.env"
+source "${REPO_ROOT}/apps/maltoria/version.env"
 VERSION="${WHISKY_VERSION:-${WHISKY_DEFAULT_VERSION}}"
 BUILD="${BUILD_NUMBER:-${WHISKY_DEFAULT_BUILD}}"
 : "${VERSION:?Missing default Whisky version}"
@@ -110,7 +110,7 @@ cat > "${CONTENTS}/Info.plist" <<PLIST
 	<key>CFBundleDisplayName</key>
 	<string>Maltoria</string>
 	<key>CFBundleExecutable</key>
-	<string>whisky-gpui</string>
+	<string>maltoria</string>
 	<key>CFBundleIconFile</key>
 	<string>AppIcon</string>
 	<key>CFBundlePackageType</key>
@@ -146,12 +146,12 @@ iconutil -c icns "${ICONSET_BUILD}" -o "${CONTENTS}/Resources/AppIcon.icns"
 rm -rf "$(dirname "${ICONSET_BUILD}")"
 
 # Sign embedded executables, then the main app with entitlements.
-for file in "${CONTENTS}/MacOS/whisky-gpui" "${CONTENTS}/Resources/whisky-bridge" "${CONTENTS}/Resources/cabextract"; do
+for file in "${CONTENTS}/MacOS/maltoria" "${CONTENTS}/Resources/whisky-bridge" "${CONTENTS}/Resources/cabextract"; do
     if [[ -f "$file" ]]; then
         codesign --force --sign - "$file"
     fi
 done
-ENTITLEMENTS="${REPO_ROOT}/apps/whisky-gpui/Maltoria.entitlements"
+ENTITLEMENTS="${REPO_ROOT}/apps/maltoria/Maltoria.entitlements"
 if [[ -f "${ENTITLEMENTS}" ]]; then
     codesign --force --sign - --entitlements "${ENTITLEMENTS}" "${APP_DIR}"
 else
@@ -161,10 +161,5 @@ codesign --verify --deep --strict "${APP_DIR}"
 
 # Strip a quarantine flag if one is present.
 xattr -dr com.apple.quarantine "${APP_DIR}" 2>/dev/null || true
-
-# Smoke check: helper discovery must find the bundled helper (read-only probe).
-if [[ "${WHISKY_MANUAL_VERIFICATION:-0}" != 1 ]]; then
-    "${CONTENTS}/MacOS/whisky-gpui" --print-bridge-status
-fi
 
 echo "Packaged ${APP_DIR}"

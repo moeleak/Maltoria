@@ -13,7 +13,7 @@ import types
 import unittest
 import zipfile
 
-TOOLS = Path(__file__).resolve().parents[2] / 'apps/whisky-gpui/tools'
+TOOLS = Path(__file__).resolve().parents[2] / 'apps/maltoria/tools'
 
 
 def load(name, path):

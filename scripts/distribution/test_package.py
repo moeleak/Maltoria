@@ -67,7 +67,7 @@ class PackageTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'inventory'):
             formats.verify(self.bundle)
         extra.unlink()
-        (self.bundle / 'bin/whisky-gpui').write_bytes(b'altered')
+        (self.bundle / 'bin/maltoria').write_bytes(b'altered')
         with self.assertRaisesRegex(ValueError, 'hash mismatch'):
             formats.verify(self.bundle)
 

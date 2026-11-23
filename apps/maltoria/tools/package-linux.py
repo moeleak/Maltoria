@@ -17,7 +17,7 @@ import tomllib
 
 ROOT = Path(__file__).resolve().parents[3]
 TOOLS = Path(__file__).resolve().parent
-PRODUCTS = ('whisky-gpui', 'whisky-bridge', 'whisky-file-picker', 'whisky-host-command')
+PRODUCTS = ('maltoria', 'whisky-bridge', 'whisky-file-picker', 'whisky-host-command')
 
 
 def command(*args):
@@ -99,7 +99,7 @@ def copy_sources(output, target):
     destination = output / 'share/whisky/sources'
     destination.mkdir(parents=True)
     paths = command('git', '-C', ROOT, 'ls-files', '--cached', '--others', '--exclude-standard', '--',
-                    'LICENSE', 'THIRD-PARTY-NOTICES.md', 'WhiskyCore', 'WhiskyMetadata', 'WhiskyBridge', 'WhiskyTranslation', 'crates', 'apps/whisky-gpui',
+                    'LICENSE', 'THIRD-PARTY-NOTICES.md', 'WhiskyCore', 'WhiskyMetadata', 'WhiskyBridge', 'WhiskyTranslation', 'crates', 'apps/maltoria',
                     'scripts/check-gpui-foundation.py', 'build.sh', 'scripts/distribution',
                     'docs/BUILDING.md', 'docs/DistributionStrategy.md').splitlines()
     with tarfile.open(destination / 'application.tar.gz', 'w:gz') as archive:
@@ -107,10 +107,10 @@ def copy_sources(output, target):
             path = ROOT / relative
             if path.is_file() or path.is_symlink():
                 archive.add(path, arcname=relative, recursive=False)
-    lock = tomllib.loads((ROOT / 'apps/whisky-gpui/Cargo.lock').read_text())
+    lock = tomllib.loads((ROOT / 'apps/maltoria/Cargo.lock').read_text())
     checksums = {(p['name'], p['version']): p['checksum'] for p in lock['package'] if 'checksum' in p}
     metadata = json.loads(command('cargo', 'metadata', '--locked', '--offline', '--format-version', '1',
-                                  '--filter-platform', target, '--manifest-path', ROOT / 'apps/whisky-gpui/Cargo.toml'))
+                                  '--filter-platform', target, '--manifest-path', ROOT / 'apps/maltoria/Cargo.toml'))
     resolved = {node['id'] for node in metadata['resolve']['nodes']}
     crates = destination / 'crates'
     licenses = output / 'share/licenses/whisky/crates'
@@ -122,11 +122,21 @@ def copy_sources(output, target):
             continue
         source = Path(package['manifest_path']).parent
         name = f"{package['name']}-{package['version']}"
-        cached = source.parents[2] / 'cache' / source.parent.name / (name + '.crate')
-        checksum = checksums[(package['name'], package['version'])]
-        if digest(cached) != checksum:
-            raise ValueError(f'Cargo.lock source checksum mismatch: {name}')
-        shutil.copyfile(cached, crates / cached.name)
+        if package['source'].startswith('git+'):
+            # Git dependencies have no registry archive or Cargo.lock checksum;
+            # their locked checkout is archived instead. The source URL names
+            # the commit.
+            archive = crates / (name + '.tar.gz')
+            with tarfile.open(archive, 'w:gz') as stream:
+                stream.add(source, arcname=name, filter=lambda member: None
+                           if Path(member.name).name in ('.git', '.cargo-ok') else member)
+            checksum = digest(archive)
+        else:
+            cached = source.parents[2] / 'cache' / source.parent.name / (name + '.crate')
+            checksum = checksums[(package['name'], package['version'])]
+            if digest(cached) != checksum:
+                raise ValueError(f'Cargo.lock source checksum mismatch: {name}')
+            shutil.copyfile(cached, crates / cached.name)
         texts = [p for p in source.iterdir() if p.is_file()
                  and p.name.lower().startswith(('license', 'licence', 'notice', 'copying'))]
         if package['license_file']:
@@ -166,7 +176,7 @@ def main():
         parser.error('Choose new bundle and archive paths; existing artifacts are preserved')
     if archive_path.is_relative_to(output):
         parser.error('Place the archive outside the bundle directory')
-    sources = {name: (args.frontend if name == 'whisky-gpui' else args.products / name).resolve(strict=True)
+    sources = {name: (args.frontend if name == 'maltoria' else args.products / name).resolve(strict=True)
                for name in PRODUCTS}
     database_resources = (args.products / 'WhiskyCore_WhiskyCore.resources').resolve(strict=True)
     if not (database_resources / 'GameDB.json').is_file():
@@ -203,7 +213,7 @@ def main():
     header = icu_header.read_text()
     icu_version = '.'.join(re.search(r'#define U_ICU_VERSION_' + key + r'_NUM\s+(\d+)', header)[1]
                            for key in ('MAJOR', 'MINOR'))
-    icu_license = ROOT / f'apps/whisky-gpui/licenses/icu-{icu_version}-LICENSE.txt'
+    icu_license = ROOT / f'apps/maltoria/licenses/icu-{icu_version}-LICENSE.txt'
     if not icu_license.is_file():
         parser.error(f'Preserve the license for Foundation ICU {icu_version} before packaging')
     output.mkdir(parents=True)
@@ -227,7 +237,7 @@ def main():
         library.chmod(0o644)
         subprocess.run(['patchelf', '--set-rpath', '$ORIGIN', str(library)], check=True)
     launcher = output / 'Maltoria'
-    launcher.write_text('#!/bin/sh\nset -eu\nbundle=$(dirname -- "$(readlink -f -- "$0")")\nexec "$bundle/bin/whisky-gpui" "$@"\n')
+    launcher.write_text('#!/bin/sh\nset -eu\nbundle=$(dirname -- "$(readlink -f -- "$0")")\nexec "$bundle/bin/maltoria" "$@"\n')
     launcher.chmod(0o755)
     notices = output / 'share/licenses/whisky'
     notices.mkdir(parents=True)
@@ -246,7 +256,7 @@ def main():
         'Maltoria Linux file and host services\n\n'
         'Target: Ubuntu 24.04 or compatible systems, ' + architecture + '.\n'
         'Install the packages in share/whisky-runtime-packages.txt using your system package manager.\n'
-        'Launch ./Maltoria or bin/whisky-gpui. The entire directory can be moved together.\n'
+        'Launch ./Maltoria or bin/maltoria. The entire directory can be moved together.\n'
         'Settings can install or refresh the desktop entry at its current location.\n'
         'Swift libraries are bundled; GTK, graphics drivers, fonts and host tools use system packages.\n'
         'Application sources and locked Rust source archives are in share/whisky/sources.\n'
@@ -263,7 +273,7 @@ def main():
     files = {str(p.relative_to(output)): dict(sha256=digest(p), bytes=p.stat().st_size,
              mode=stat.S_IMODE(p.stat().st_mode)) for p in sorted(output.rglob('*')) if p.is_file()}
     application_version = os.environ.get('WHISKY_LINUX_VERSION') or tomllib.loads(
-        (ROOT / 'apps/whisky-gpui/Cargo.toml').read_text())['package']['version']
+        (ROOT / 'apps/maltoria/Cargo.toml').read_text())['package']['version']
     manifest = dict(formatVersion=1, applicationVersion=application_version,
                     architecture=architecture, platform='linux', distribution='ubuntu-24.04',
                     sourceCommit=command('git', '-C', ROOT, 'rev-parse', 'HEAD'),

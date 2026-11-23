@@ -22,9 +22,9 @@ import uuid
 
 ROOT = Path(__file__).resolve().parents[2]
 TARGETS = {
-    'whisky-macos-gpui-arm64': ('Darwin', 'arm64', 'GPUI · ad-hoc ZIP · 预发布', ('swift', 'cargo', 'iconutil', 'codesign', 'ditto')),
-    'whisky-linux-amd64': ('Linux', 'x86_64', 'GPUI · Ubuntu 24.04 · tar.gz', ('swift', 'cargo', 'clang', 'patchelf', 'pkg-config')),
-    'whisky-linux-arm64': ('Linux', 'arm64', 'GPUI · Ubuntu 24.04 · tar.gz', ('swift', 'cargo', 'clang', 'patchelf', 'pkg-config')),
+    'whisky-macos-gpui-arm64': ('Darwin', 'arm64', 'Material 3 · ad-hoc ZIP · 预发布', ('swift', 'cargo', 'iconutil', 'codesign', 'ditto')),
+    'whisky-linux-amd64': ('Linux', 'x86_64', 'Material 3 · Ubuntu 24.04 · tar.gz', ('swift', 'cargo', 'clang', 'patchelf', 'pkg-config')),
+    'whisky-linux-arm64': ('Linux', 'arm64', 'Material 3 · Ubuntu 24.04 · tar.gz', ('swift', 'cargo', 'clang', 'patchelf', 'pkg-config')),
     'wine-macos-arm64': ('Darwin', 'arm64', 'Apple Silicon 主机 · x86_64 Wine/Rosetta · Libraries', ('cmake', 'pkg-config', 'xcrun')),
     'wine-linux-amd64': ('Linux', 'x86_64', 'Ubuntu 24.04 · new WoW64 · tar.gz', ('cc', 'make', 'patchelf', 'pkg-config', 'git')),
 }
@@ -98,7 +98,7 @@ def parser():
     result = argparse.ArgumentParser(description=__doc__, epilog='运行 ./build.sh menu 打开交互菜单。')
     result.add_argument('action', choices=('menu', 'list', 'doctor', 'plan', 'run'), nargs='?', default='menu')
     result.add_argument('target', choices=TARGETS, nargs='?')
-    result.add_argument('--install', action='store_true', help='构建后替换 /Applications/Maltoria.app（macOS GPUI）')
+    result.add_argument('--install', action='store_true', help='构建后替换 /Applications/Maltoria.app（macOS）')
     result.add_argument('--version', help='应用或 Linux 安装包版本 X.Y.Z')
     result.add_argument('--formats', nargs='+', choices=('tar', 'deb', 'rpm', 'appimage'),
                         help='Linux 应用格式；默认 tar deb rpm appimage')
@@ -150,7 +150,7 @@ def plan(args):
     if not args.target:
         raise ValueError('请选择构建目标，例如 ./build.sh plan whisky-linux-amd64')
     if args.install and (args.target != 'whisky-macos-gpui-arm64' or args.executor != 'native'):
-        raise ValueError('--install 适用于原生 macOS GPUI 构建')
+        raise ValueError('--install 适用于原生 macOS 应用构建')
     if args.formats and args.target not in LINUX_APP_TARGETS:
         raise ValueError('--formats 适用于 whisky-linux-amd64 / whisky-linux-arm64')
     is_wine = args.target.startswith('wine-')
@@ -192,13 +192,13 @@ def plan(args):
     work = None
     if args.target == 'whisky-macos-gpui-arm64':
         app_dir = output / 'artifacts/Maltoria.app'
-        env['WHISKY_GPUI_APP_DIR'] = str(app_dir)
+        env['MALTORIA_APP_DIR'] = str(app_dir)
         if args.version:
             if not re.fullmatch(r'\d+\.\d+\.\d+', args.version):
                 raise ValueError('请提供 --version X.Y.Z')
             env['WHISKY_VERSION'] = args.version
             env['BUILD_NUMBER'] = str(args.build_number)
-        step('GPUI 应用构建与封装', ['bash', repo / 'apps/whisky-gpui/tools/package-app.sh'])
+        step('应用构建与封装', ['bash', repo / 'apps/maltoria/tools/package-app.sh'])
         if args.version:
             packages_dir = output / 'packages'
             step('macOS Release 资产打包与校验和', ['python3', ROOT / 'scripts/distribution/package-macos.py',
@@ -213,7 +213,7 @@ def plan(args):
             raise ValueError('请提供 --version X.Y.Z')
         env['WHISKY_LINUX_VERSION'] = version
         env['WHISKY_LINUX_RELEASE_OUTPUT'] = str(output / 'artifacts')
-        step('Linux Release 与源码、许可证打包', ['bash', repo / 'apps/whisky-gpui/tools/build-linux-release.sh'])
+        step('Linux Release 与源码、许可证打包', ['bash', repo / 'apps/maltoria/tools/build-linux-release.sh'])
         step('glibc 基线和 ELF 依赖报告', ['python3', ROOT / 'scripts/distribution/audit-elf.py',
              output / 'artifacts/Maltoria', '--output', output / 'elf-abi.json'])
         formats = [name for name in (args.formats or ['tar', 'deb', 'rpm', 'appimage']) if name != 'tar']
@@ -261,7 +261,7 @@ def plan(args):
         docker_platform = 'linux/' + docker_arch
         dockerfile = ROOT / 'scripts/distribution' / ('wine.Dockerfile' if is_wine else 'app.Dockerfile')
         dependency_script = repo / ('scripts/linux/install-deps.sh' if is_wine else
-                                    'apps/whisky-gpui/tools/install-linux-deps.sh')
+                                    'apps/maltoria/tools/install-linux-deps.sh')
         image_key = hashlib.sha256(dockerfile.read_bytes() + dependency_script.read_bytes()).hexdigest()[:16]
         image = 'whisky-builder-' + ('wine' if is_wine else 'app') + f':ubuntu24-{docker_arch}-' + image_key
         cache = ROOT / 'build/distribution-cache/docker' / args.target

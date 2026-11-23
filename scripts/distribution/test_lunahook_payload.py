@@ -111,8 +111,8 @@ class LunaHookPayloadTests(unittest.TestCase):
     def test_bridge_payload_lookup_matches_packaged_layout(self):
         capture = (ROOT / 'WhiskyBridge/Sources/WhiskyApplication/TranslationCapture.swift').read_text()
         self.assertIn('appendingPathComponent("LunaHook")', capture)
-        self.assertIn('Contents/Resources/LunaHook', (ROOT / 'apps/whisky-gpui/tools/package-app.sh').read_text())
-        self.assertIn("bin/LunaHook", (ROOT / 'apps/whisky-gpui/tools/package-linux.py').read_text())
+        self.assertIn('Contents/Resources/LunaHook', (ROOT / 'apps/maltoria/tools/package-app.sh').read_text())
+        self.assertIn("bin/LunaHook", (ROOT / 'apps/maltoria/tools/package-linux.py').read_text())
 
 
 if __name__ == '__main__':

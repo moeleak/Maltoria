@@ -66,7 +66,7 @@ archives and the Windows CI artifact; see [LunaHook-BUILD.md](../ThirdParty/Luna
 
 The Linux metadata service links the host's GdkPixbuf library and uses
 `webp-pixbuf-loader` for WebP covers. Ubuntu development setup is recorded in
-[`install-linux-deps.sh`](../apps/whisky-gpui/tools/install-linux-deps.sh), and
+[`install-linux-deps.sh`](../apps/maltoria/tools/install-linux-deps.sh), and
 the portable package boundary is described in
 [`WhiskyMetadata/README.md`](../WhiskyMetadata/README.md). These Linux host
 dependencies participate in the Linux distribution work tracked in

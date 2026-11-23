@@ -20,7 +20,7 @@ import urllib.request
 HERE = Path(__file__).resolve().parent
 DEPENDENCIES = json.loads((HERE / 'linux-dependencies.json').read_text())
 ARCHITECTURES = {'x86_64': ('amd64', 'x86_64', 62), 'aarch64': ('arm64', 'aarch64', 183)}
-PRODUCTS = ('whisky-gpui', 'whisky-bridge', 'whisky-file-picker', 'whisky-host-command')
+PRODUCTS = ('maltoria', 'whisky-bridge', 'whisky-file-picker', 'whisky-host-command')
 
 
 def digest(path):
@@ -370,7 +370,7 @@ cache_tmp=$(mktemp "$cache/loaders.XXXXXX")
 "$bundle/tools/gdk-pixbuf-query-loaders" "$GDK_PIXBUF_MODULEDIR"/*.so > "$cache_tmp"
 mv -f "$cache_tmp" "$cache/loaders.cache"
 export GDK_PIXBUF_MODULE_FILE="$cache/loaders.cache"
-exec "$bundle/bin/whisky-gpui" "$@"
+exec "$bundle/bin/maltoria" "$@"
 '''
 
 

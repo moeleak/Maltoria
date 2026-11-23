@@ -107,7 +107,7 @@ Swift Runtime Library Exception, where supplied upstream, are preserved in
   (`convert-realcugan-coreml.py`) and shipped as
   `realcugan-384x384.mlpackage`; `realcugan-helper` tiles a cover into that
   window, blends the overlaps, and writes the enlarged PNG. Weights are MIT and
-  were checked against the digest pinned in `apps/whisky-gpui/tools/upscaler-sources.json` before
+  were checked against the digest pinned in `apps/maltoria/tools/upscaler-sources.json` before
   conversion.
 
 ## Metadata design reference and data attribution

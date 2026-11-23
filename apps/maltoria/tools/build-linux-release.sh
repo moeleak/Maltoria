@@ -35,13 +35,13 @@ with tempfile.TemporaryDirectory(prefix='whisky-linux-release-') as folder:
     (output / 'products-path.txt').write_text(products + '\n')
 PY
 cargo build --locked --release --jobs "${WHISKY_BUILD_JOBS:-4}" \
-    --manifest-path "$repo_root/apps/whisky-gpui/Cargo.toml" --target-dir "$cache/rust-build"
+    --manifest-path "$repo_root/apps/maltoria/Cargo.toml" --target-dir "$cache/rust-build"
 upscaler="$cache/upscaler-payload"
-python3 "$repo_root/apps/whisky-gpui/tools/build-linux-upscaler.py" \
+python3 "$repo_root/apps/maltoria/tools/build-linux-upscaler.py" \
     --output "$upscaler" --cache "${WHISKY_UPSCALER_BUILD_CACHE:-$cache/upscaler-cache}" \
     --jobs "${WHISKY_BUILD_JOBS:-4}"
-python3 "$repo_root/apps/whisky-gpui/tools/package-linux.py" \
-    --frontend "$cache/rust-build/release/whisky-gpui" \
+python3 "$repo_root/apps/maltoria/tools/package-linux.py" \
+    --frontend "$cache/rust-build/release/maltoria" \
     --products "$(cat "$output/products-path.txt")" --output "$output/Maltoria" \
     --archive "$output/maltoria-linux-$(uname -m).tar.gz" --upscaler "$upscaler" \
     ${MALTORIA_LUNAHOOK_ARTIFACTS:+--lunahook-artifacts "$MALTORIA_LUNAHOOK_ARTIFACTS"}

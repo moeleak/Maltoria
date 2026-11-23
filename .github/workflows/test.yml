@@ -139,7 +139,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Install Linux development dependencies
-        run: sudo bash apps/whisky-gpui/tools/install-linux-deps.sh
+        run: sudo bash apps/maltoria/tools/install-linux-deps.sh
 
       - name: Setup Swift
         # setup-swift's swiftly path cannot resolve current releases; install
@@ -202,7 +202,7 @@ jobs:
           tar -xzf "$tarball" -C build/reliability/linux-bundle
           BUNDLE_ROOT="$(pwd)/build/reliability/linux-bundle/Maltoria"
           test -x "$BUNDLE_ROOT/Maltoria" || { echo "missing executable launcher $BUNDLE_ROOT/Maltoria"; exit 1; }
-          test -x "$BUNDLE_ROOT/bin/whisky-gpui" || { echo "missing executable $BUNDLE_ROOT/bin/whisky-gpui"; exit 1; }
+          test -x "$BUNDLE_ROOT/bin/maltoria" || { echo "missing executable $BUNDLE_ROOT/bin/maltoria"; exit 1; }
           test -x "$BUNDLE_ROOT/bin/whisky-bridge" || { echo "missing executable $BUNDLE_ROOT/bin/whisky-bridge"; exit 1; }
           echo "BUNDLE_ROOT=$BUNDLE_ROOT" >> "$GITHUB_ENV"
 

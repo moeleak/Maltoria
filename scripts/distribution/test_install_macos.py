@@ -20,7 +20,7 @@ class InstallTests(unittest.TestCase):
         self.source = self.root / 'source.app'
         self.target = self.root / 'Maltoria.app'
         for app, content in ((self.source, b'new'), (self.target, b'old')):
-            for rel in ('Contents/MacOS/whisky-gpui', 'Contents/Resources/whisky-bridge'):
+            for rel in ('Contents/MacOS/maltoria', 'Contents/Resources/whisky-bridge'):
                 path = app / rel
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_bytes(content)
@@ -31,7 +31,7 @@ class InstallTests(unittest.TestCase):
     def test_replaces_only_after_staged_verification(self):
         with mock.patch.object(install_macos, 'verify'), mock.patch.object(install_macos.subprocess, 'run', self.ditto):
             install_macos.install(self.source, self.target)
-        self.assertEqual((self.target / 'Contents/MacOS/whisky-gpui').read_bytes(), b'new')
+        self.assertEqual((self.target / 'Contents/MacOS/maltoria').read_bytes(), b'new')
         self.assertEqual(list(self.root.glob('.whisky-install-*')), [])
         self.assertTrue(self.source.exists())
 
@@ -39,16 +39,16 @@ class InstallTests(unittest.TestCase):
         with mock.patch.object(install_macos, 'verify'), mock.patch.object(install_macos.subprocess, 'run', self.ditto):
             install_macos.install(self.source, self.target, remove_source=True)
         self.assertFalse(self.source.exists())
-        self.assertEqual((self.target / 'Contents/MacOS/whisky-gpui').read_bytes(), b'new')
+        self.assertEqual((self.target / 'Contents/MacOS/maltoria').read_bytes(), b'new')
 
     def test_failed_install_verification_restores_previous_app(self):
         def verify(path):
-            if path == self.target and (path / 'Contents/MacOS/whisky-gpui').read_bytes() == b'new':
+            if path == self.target and (path / 'Contents/MacOS/maltoria').read_bytes() == b'new':
                 raise ValueError('failed verification')
         with mock.patch.object(install_macos, 'verify', verify), mock.patch.object(install_macos.subprocess, 'run', self.ditto):
             with self.assertRaises(ValueError):
                 install_macos.install(self.source, self.target, remove_source=True)
-        self.assertEqual((self.target / 'Contents/MacOS/whisky-gpui').read_bytes(), b'old')
+        self.assertEqual((self.target / 'Contents/MacOS/maltoria').read_bytes(), b'old')
         self.assertTrue(self.source.exists())
 
     def test_rejects_removing_install_destination(self):

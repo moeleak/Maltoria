@@ -13,8 +13,12 @@ libgtk-4-1
 libsecret-tools
 gnome-keyring
 webp-pixbuf-loader
+libx11-6
+libx11-xcb1
+libxcursor1
+libxi6
+libxrandr2
 libxcb1
-libxcb-cursor0
 libxcb-xkb1
 libxkbcommon0
 libxkbcommon-x11-0

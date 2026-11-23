@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Install a signed GPUI build, preserving the previous app until verification."""
+"""Install a signed Maltoria build, preserving the previous app until verification."""
 import argparse
 import hashlib
 import os
@@ -21,9 +21,9 @@ def digest(path):
 
 def verify(app):
     info = plistlib.loads((app / 'Contents/Info.plist').read_bytes())
-    if info.get('CFBundleIdentifier') != 'com.daydalek.Maltoria' or info.get('CFBundleExecutable') != 'whisky-gpui':
-        raise ValueError('应用标识或可执行文件与 Whisky GPUI 不符')
-    for path in ('Contents/MacOS/whisky-gpui', 'Contents/Resources/whisky-bridge',
+    if info.get('CFBundleIdentifier') != 'com.daydalek.Maltoria' or info.get('CFBundleExecutable') != 'maltoria':
+        raise ValueError('应用标识或可执行文件与 Maltoria 不符')
+    for path in ('Contents/MacOS/maltoria', 'Contents/Resources/whisky-bridge',
                  'Contents/Resources/winetricks', 'Contents/Resources/verbs.txt',
                  'Contents/Resources/cabextract'):
         if not (app / path).is_file():
@@ -46,7 +46,7 @@ def install(source, destination, remove_source=False):
     try:
         subprocess.run(['ditto', str(source), str(staged)], check=True)
         verify(staged)
-        for path in ('Contents/MacOS/whisky-gpui', 'Contents/Resources/whisky-bridge'):
+        for path in ('Contents/MacOS/maltoria', 'Contents/Resources/whisky-bridge'):
             if digest(source / path) != digest(staged / path):
                 raise ValueError('部署副本校验失败：' + path)
         had_previous = destination.exists()

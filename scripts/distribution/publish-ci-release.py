@@ -139,7 +139,7 @@ def publish(repository, run_id):
     if release_tag:
         version = release_tag[1:]
     else:
-        source = api(f'repos/{repository}/contents/apps/whisky-gpui/version.env?ref={commit}')
+        source = api(f'repos/{repository}/contents/apps/maltoria/version.env?ref={commit}')
         versions = re.findall(r'^WHISKY_DEFAULT_VERSION=([0-9]+\.[0-9]+\.[0-9]+)$',
                               base64.b64decode(source['content']).decode(), re.MULTILINE)
         if len(versions) != 1:

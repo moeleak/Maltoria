@@ -5,13 +5,15 @@ import argparse
 import json
 import os
 from pathlib import Path
+import runpy
 import shutil
 import signal
 import subprocess
 import time
 
 
-def window_check(command, env, output, name, title, key, expected):
+def window_check(command, env, output, name, title, key=None, expected=None):
+    """Wait for a rendered window, then close it with `key`, or terminate it without one."""
     with (output / (name + '.log')).open('w') as log:
         process = subprocess.Popen(list(map(str, command)), env=env, stdout=log,
                                    stderr=subprocess.STDOUT, start_new_session=True)
@@ -43,6 +45,8 @@ def window_check(command, env, output, name, title, key, expected):
                     break
                 time.sleep(0.5)
             assert variation > 0.003, name + ' window has no rendered content'
+            if key is None:
+                return
             subprocess.run(['xdotool', 'key', '--clearmodifiers', key], env=env, check=True)
             process.wait(timeout=30)
             assert process.returncode == expected, (name, process.returncode)
@@ -87,7 +91,7 @@ def main():
     env = dict(os.environ, HOME=str(home), XDG_DATA_HOME=str(home / '.local/share'),
         XDG_CONFIG_HOME=str(home / '.config'), XDG_CACHE_HOME=str(home / '.cache'),
         XDG_STATE_HOME=str(home / '.local/state'), WHISKY_REGISTRY=str(home / 'BottleVM.plist'),
-        WHISKY_GPUI_STATE=str(home / 'window.json'), APPIMAGE_EXTRACT_AND_RUN='1',
+        APPIMAGE_EXTRACT_AND_RUN='1',
         GDK_BACKEND='x11', WGPU_BACKEND='vulkan', LIBGL_ALWAYS_SOFTWARE='1')
     assert not shutil.which('swift') and not shutil.which('cargo'), 'Use a clean runtime image'
     launcher = Path('/usr/bin/whisky')
@@ -99,42 +103,33 @@ def main():
         launcher.chmod(0o755)
     report = dict(passed=False, format=args.format, launcher=str(launcher), checks=[])
     try:
-        for name, command in [('bridge', ['--print-bridge-status']), ('library', ['--print-library', '--all'])]:
-            result = subprocess.run([str(launcher)] + command, env=env, capture_output=True, text=True, timeout=120)
-            (output / (name + '.log')).write_text(result.stdout + '\n' + result.stderr)
-            assert result.returncode == 0, result.stderr
-            value = json.loads(result.stdout)
-            if name == 'bridge':
-                assert value['platform'] == 'linux'
-                assert {'setup.status', 'setup.install', 'system.desktop.install'}.issubset(value['methods'])
-            else:
-                assert value['containers'] == []
-            report['checks'].append(name)
-        # A second AppImage location verifies fresh extraction and relative helper resolution.
-        if args.format == 'appimage':
-            moved = output / 'Second location.AppImage'
-            launcher.rename(moved)
-            launcher = moved
-            result = subprocess.run([str(launcher), '--print-bridge-status'], env=env,
-                                    capture_output=True, text=True, timeout=120)
-            assert result.returncode == 0 and json.loads(result.stdout)['platform'] == 'linux', result.stderr
-            report['checks'].append('relocation')
-            report['launcher'] = str(launcher)
-        window_check([launcher], env, output, 'window', '^Maltoria$', 'ctrl+q', 0)
+        # The Material app has no quit shortcut; the window is terminated once it renders.
+        window_check([launcher], env, output, 'window', '^Maltoria$')
         report['checks'].append('production-window')
         if args.format == 'appimage':
             subprocess.run([str(launcher), '--appimage-extract'], cwd=output, env=env,
                            stdout=subprocess.DEVNULL, check=True, timeout=120)
             appdir = output / 'squashfs-root'
             wrapper = appdir / 'PickerRun'
-            script = (appdir / 'AppRun').read_text().replace('bin/whisky-gpui', 'bin/whisky-file-picker')
+            script = (appdir / 'AppRun').read_text().replace('bin/maltoria', 'bin/whisky-file-picker')
             bundle = appdir / 'usr/lib/whisky'
         else:
             wrapper = output / 'PickerRun'
-            script = Path('/usr/bin/whisky').read_text().replace('bin/whisky-gpui', 'bin/whisky-file-picker')
+            script = Path('/usr/bin/whisky').read_text().replace('bin/maltoria', 'bin/whisky-file-picker')
             script = script.replace('/opt/whisky/Whisky', '/opt/whisky/bin/whisky-file-picker')
             script = script.replace('/opt/whisky/Maltoria', '/opt/whisky/bin/whisky-file-picker')
             bundle = Path('/opt/whisky')
+        bridge_type = runpy.run_path('/tests/check-diagnostics.py')['Bridge']
+        with (output / 'bridge.log').open('w') as log:
+            bridge = bridge_type(bundle / 'bin/whisky-bridge', env, log)
+            try:
+                value = bridge.call('bridge.describe', {})['result']
+                assert value['platform'] == 'linux'
+                assert {'setup.status', 'setup.install', 'system.desktop.install'}.issubset(value['methods'])
+                assert bridge.call('workspace.containers', {})['result'] == []
+            finally:
+                bridge.close()
+        report['checks'].append('packaged-helper-and-isolated-library')
         wrapper.write_text(script)
         wrapper.chmod(0o755)
         window_check([wrapper, '--file-selection', '--title', 'Whisky packaging chooser',

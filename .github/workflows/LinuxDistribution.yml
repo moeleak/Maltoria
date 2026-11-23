@@ -74,7 +74,7 @@ jobs:
             *)
               value="$INPUT_VERSION"
               if [ -z "$value" ]; then
-                . ./apps/whisky-gpui/version.env
+                . ./apps/maltoria/version.env
                 value="$WHISKY_DEFAULT_VERSION"
               fi
               ;;
@@ -88,13 +88,13 @@ jobs:
             /root/.cargo/registry
             /root/.cargo/git
             /tmp/whisky-compile-cache
-          key: linux-amd64-swift6.4.0-rust1.99.1-${{ hashFiles('apps/whisky-gpui/Cargo.lock', '**/Package.resolved', 'apps/whisky-gpui/tools/build-linux-release.sh', '.github/workflows/LinuxDistribution.yml') }}-${{ github.sha }}
+          key: linux-amd64-swift6.4.0-rust1.99.1-${{ hashFiles('apps/maltoria/Cargo.lock', '**/Package.resolved', 'apps/maltoria/tools/build-linux-release.sh', '.github/workflows/LinuxDistribution.yml') }}-${{ github.sha }}
           restore-keys: |
-            linux-amd64-swift6.4.0-rust1.99.1-${{ hashFiles('apps/whisky-gpui/Cargo.lock', '**/Package.resolved', 'apps/whisky-gpui/tools/build-linux-release.sh', '.github/workflows/LinuxDistribution.yml') }}-
+            linux-amd64-swift6.4.0-rust1.99.1-${{ hashFiles('apps/maltoria/Cargo.lock', '**/Package.resolved', 'apps/maltoria/tools/build-linux-release.sh', '.github/workflows/LinuxDistribution.yml') }}-
             linux-amd64-swift6.4.0-rust1.99.1-
       - name: Install the fixed build toolchain
         run: |
-          bash apps/whisky-gpui/tools/install-linux-deps.sh
+          bash apps/maltoria/tools/install-linux-deps.sh
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o /tmp/rustup.sh
           sh /tmp/rustup.sh -y --profile minimal --default-toolchain 1.99.1
           echo /root/.cargo/bin >> "$GITHUB_PATH"
@@ -162,7 +162,7 @@ jobs:
           key: appimage-tools-${{ runner.arch }}-${{ hashFiles('scripts/distribution/appimage-tools.json') }}
       - name: Install package builders and the declared runtime libraries
         run: |
-          sudo bash apps/whisky-gpui/tools/install-linux-runtime-deps.sh
+          sudo bash apps/maltoria/tools/install-linux-runtime-deps.sh
           sudo apt-get install -y --no-install-recommends rpm dpkg-dev patchelf binutils squashfs-tools file
       - name: Generate and inspect all three formats
         env:

@@ -32,7 +32,7 @@ and WhiskyKit tests pass. No manual dispatch or file upload is required.
   from a successful CI run's **Artifacts** section, alongside the smoke evidence.
 
 The shared development package version comes from
-[`apps/whisky-gpui/version.env`](../apps/whisky-gpui/version.env). Update it when
+[`apps/maltoria/version.env`](../apps/maltoria/version.env). Update it when
 preparing a new version. Linux tag builds still derive their version from
 `linux-vX.Y.Z`; an explicit manual version overrides the development default.
 Main pushes and pull requests run validation. CI builds distribution packages

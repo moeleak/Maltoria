@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Package a verified macOS GPUI Maltoria.app into release ZIP, source archive and checksums."""
+"""Package a verified macOS Maltoria.app into release ZIP, source archive and checksums."""
 import argparse
 import hashlib
 import importlib.util
@@ -44,7 +44,7 @@ def verify_app(app: Path, version: str) -> None:
     if app_version != version:
         raise ValueError(f"Version mismatch in Info.plist: expected {version}, got {app_version}")
 
-    executable = app / 'Contents/MacOS/whisky-gpui'
+    executable = app / 'Contents/MacOS/maltoria'
     if not executable.is_file():
         raise FileNotFoundError(f"Main executable not found: {executable}")
 
@@ -105,7 +105,7 @@ def package(app: Path, version: str, output: Path, build_number: int = 1) -> Non
         'app_version': version,
         'build_number': build_number,
         'architecture': 'arm64',
-        'ui': 'gpui',
+        'ui': 'material',
         'commit': commit,
         'checkout_dirty': checkout_dirty,
         'signing': 'ad-hoc',
@@ -114,7 +114,7 @@ def package(app: Path, version: str, output: Path, build_number: int = 1) -> Non
     }
     (output / 'build-info.json').write_text(json.dumps(build_info, indent=2) + '\n')
 
-    release_notes = f"""Maltoria {version} for Apple Silicon (GPUI).
+    release_notes = f"""Maltoria {version} for Apple Silicon.
 
 Download {archive_name}, extract Maltoria.app and drag it into Applications.
 The app downloads CrossOver-based GE Wine Libraries separately on first setup.
