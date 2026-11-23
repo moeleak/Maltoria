@@ -13,8 +13,10 @@ use iced::widget::{Column, Row, container, text};
 use iced::{Alignment, Length};
 use maltoria_core::i18n::fmt;
 use maltoria_core::model::Game;
-use maltoria_core::runtime::{RuntimeAction, RuntimeState, RuntimeTable};
-use material::widget::{image, toolbar};
+use maltoria_core::runtime::{
+    ClipboardDecision, ClipboardPrompt, RuntimeAction, RuntimeState, RuntimeTable,
+};
+use material::widget::{dialog, image, toolbar};
 use material::{Theme, tokens};
 use material_ui_rs as material;
 
@@ -196,6 +198,60 @@ fn bar<'a>(
     }
 
     toolbar::floating_vibrant(actions).into()
+}
+
+/// The size of what the clipboard holds, as the GPUI app writes it.
+pub fn clipboard_size(bytes: i64) -> String {
+    if bytes <= 0 {
+        return maltoria_core::i18n::s().dialogs.unknown_size.to_owned();
+    }
+
+    if bytes < 1024 {
+        return maltoria_core::i18n::s().common.bytes_human(bytes as u64);
+    }
+
+    format!("{:.1} KB", bytes as f64 / 1024.0)
+}
+
+/// The question the helper asks before a launch while the clipboard holds
+/// something the game could read: clear it, keep it, or not launch.
+pub fn clipboard_dialog<'a>(
+    prompt: &ClipboardPrompt,
+    alpha: f32,
+) -> material::Element<'a, Message> {
+    let strings = &maltoria_core::i18n::s().dialogs;
+    let content = if prompt.content_type.is_empty() {
+        strings.clipboard_unknown_content.to_owned()
+    } else {
+        prompt.content_type.clone()
+    };
+    let options = dialog::AlphaOptions::default().alpha(alpha);
+
+    dialog::alert_with(
+        strings.clipboard_title,
+        strings.clipboard_prompt_body(&content, &clipboard_size(prompt.size_bytes)),
+        dialog::actions([
+            dialog::action_button_with(
+                maltoria_core::i18n::s().common.cancel,
+                Message::ClipboardDismiss,
+                options,
+            ),
+            dialog::action_button_with(
+                strings.clipboard_keep_launch,
+                Message::ClipboardDecide(ClipboardDecision::Keep),
+                options,
+            ),
+            dialog::action_button_with(
+                strings.clipboard_clear_launch,
+                Message::ClipboardDecide(ClipboardDecision::Clear),
+                options,
+            ),
+        ]),
+        dialog::AlertOptions::default()
+            .icon("content_paste")
+            .alpha(alpha),
+    )
+    .into()
 }
 
 #[cfg(test)]

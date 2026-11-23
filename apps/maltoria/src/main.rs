@@ -89,6 +89,9 @@ pub enum Message {
     Retry,
     DismissNotice,
     DevPoll,
+    /// Answers the helper's clipboard question before a launch.
+    ClipboardDecide(maltoria_core::runtime::ClipboardDecision),
+    ClipboardDismiss,
     /// Half a minute passed while games run.
     Tick,
     DevShot(String, iced::window::Screenshot),
@@ -160,6 +163,9 @@ pub struct App {
     games: Vec<Game>,
     runtime: RuntimeTable,
     sessions: playing::Sessions,
+    /// The clipboard question a launch is waiting on, while it shows.
+    clipboard: Option<maltoria_core::runtime::ClipboardPrompt>,
+    clipboard_transition: dialog::Transition,
     library: library::State,
     /// The game whose details dialog is open, or closing.
     details: Option<String>,
@@ -219,6 +225,8 @@ fn boot() -> (App, Task<Message>) {
         games: Vec::new(),
         runtime: RuntimeTable::default(),
         sessions: playing::Sessions::default(),
+        clipboard: None,
+        clipboard_transition: dialog::Transition::default(),
         library: library::State::default(),
         details: None,
         details_transition: dialog::Transition::default(),
@@ -288,6 +296,7 @@ fn subscription(app: &App) -> Subscription<Message> {
         || app.theme.is_animating()
         || app.snackbar.is_active()
         || app.details_transition.is_animating()
+        || app.clipboard_transition.is_animating()
         || app.appearance.is_animating()
     {
         subscriptions.push(iced::window::frames().map(Message::Frame));
@@ -500,6 +509,11 @@ fn update(app: &mut App, message: Message) -> Task<Message> {
             let _ = app.theme.advance(now);
             let _ = app.snackbar.advance(now);
             let _ = app.details_transition.advance(now);
+            let _ = app.clipboard_transition.advance(now);
+
+            if !app.clipboard_transition.is_active() {
+                app.clipboard = None;
+            }
             let _ = app.appearance.advance(now);
 
             // A dismissed dialog lets go of its game once it is gone.
@@ -522,6 +536,13 @@ fn update(app: &mut App, message: Message) -> Task<Message> {
         Message::DismissNotice => app.snackbar.dismiss(Instant::now()),
         Message::DevPoll => return dev_requests(app),
         Message::Tick => {}
+        Message::ClipboardDecide(decision) => {
+            if let (Some(bridge), Some(prompt)) = (&app.bridge, app.clipboard.clone()) {
+                bridge.resolve_clipboard(prompt, decision);
+            }
+            app.clipboard_transition.dismiss(Instant::now());
+        }
+        Message::ClipboardDismiss => app.clipboard_transition.dismiss(Instant::now()),
         Message::DevShot(name, screenshot) => {
             if let Some(directory) = dev::directory()
                 && let Err(error) = dev::save(&directory, &name, &screenshot)
@@ -1037,6 +1058,10 @@ fn bridge_event(app: &mut App, event: BridgeEvent) -> Task<Message> {
             }
         }
         BridgeEvent::Metadata { update } => return metadata_event(app, update),
+        BridgeEvent::ClipboardPrompt(prompt) => {
+            app.clipboard = Some(prompt);
+            app.clipboard_transition.show(Instant::now());
+        }
         BridgeEvent::EntryRating {
             container,
             entry_id,
@@ -1257,6 +1282,20 @@ fn view(app: &App) -> material::Element<'_, Message> {
         &app.details_transition,
         now,
         dialog,
+        dialog::ModalOptions::default().margin(tokens::component::dialog::WINDOW_MARGIN),
+    );
+
+    // A launch's clipboard question can come from the details dialog: it
+    // goes over everything.
+    let clipboard = app.clipboard.as_ref().map_or_else(
+        || Space::new().into(),
+        |prompt| playing::clipboard_dialog(prompt, app.clipboard_transition.alpha(now)),
+    );
+    let content = dialog::modal_animated_with(
+        content,
+        &app.clipboard_transition,
+        now,
+        clipboard,
         dialog::ModalOptions::default().margin(tokens::component::dialog::WINDOW_MARGIN),
     );
 
