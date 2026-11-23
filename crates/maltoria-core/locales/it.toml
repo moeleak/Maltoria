@@ -420,7 +420,6 @@ setup_runtime_detail = "Maltoria esegue i giochi Windows con il proprio Wine. Si
 setup_container_title = "Preparazione del contenitore"
 setup_container_detail = "Tutti i giochi girano in un unico contenitore, configurato per il testo giapponese e cinese."
 create_container = "Crea contenitore"
-refreshing_linked = "Aggiornamento dei metadati collegati…"
 
 [maps.provider_label]
 "anthropic" = "Anthropic"

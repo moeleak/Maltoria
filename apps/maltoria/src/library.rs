@@ -14,7 +14,7 @@ use maltoria_core::model::{Game, format_play_time};
 use maltoria_core::program_settings::{ProgramSettingsDto, locale_label};
 use maltoria_core::runtime::{PrimaryAction, RuntimeAction, RuntimeTable, primary_action_for};
 use material::widget::button::{self, ButtonVariant, ChipVariant, IconButtonVariant};
-use material::widget::{grid, image, menu, search, select};
+use material::widget::{grid, image, menu, progress_bar, search, select};
 use material::{Theme, tokens};
 use material_ui_rs as material;
 
@@ -163,6 +163,9 @@ pub struct State {
     /// background and cropped from the top, so that a figure fills its cell
     /// with its face in view.
     pub pictures: image::Cache<String>,
+    /// The loading indicator in place of the sync button, while a metadata
+    /// sync runs.
+    pub syncing: Option<progress_bar::IndeterminateState>,
 }
 
 impl Default for State {
@@ -173,6 +176,7 @@ impl Default for State {
             sort: Sort::default(),
             selected: None,
             settings: None,
+            syncing: None,
             covers: image::Cache::new(COVER_CACHE_SIZE)
                 .aspect_ratio(COVER_RATIO)
                 .max_dimension(COVER_DECODE_SIZE),
@@ -229,6 +233,25 @@ pub fn action_message(action: Option<RuntimeAction>, game: &Game) -> Option<Mess
     })
 }
 
+/// The sync button, or while a sync runs a loading indicator of its size.
+fn sync_button<'a>(
+    syncing: Option<&progress_bar::IndeterminateState>,
+) -> material::Element<'a, Message> {
+    let side = tokens::component::icon_button::CONTAINER_WIDTH;
+
+    match syncing {
+        Some(animation) => progress_bar::loading(
+            progress_bar::LoadingIndicatorMode::indeterminate(animation.loading_phase()),
+        )
+        .width(Length::Fixed(side))
+        .height(Length::Fixed(side))
+        .into(),
+        None => button::icon_button("sync", IconButtonVariant::Standard)
+            .on_press(Message::SyncMetadata)
+            .into(),
+    }
+}
+
 pub fn view<'a>(
     games: &'a [Game],
     state: &'a State,
@@ -245,10 +268,7 @@ pub fn view<'a>(
             select::outlined(Sort::ALL, Some(state.sort), Message::Sort)
                 .width(Length::Fixed(160.0)),
         )
-        .push(
-            button::icon_button("sync", IconButtonVariant::Standard)
-                .on_press(Message::SyncMetadata),
-        )
+        .push(sync_button(state.syncing.as_ref()))
         .push(
             button::extended_fab_with_icon("add", s().app.add_game, button::FabVariant::Primary)
                 .on_press(Message::AddProgram),

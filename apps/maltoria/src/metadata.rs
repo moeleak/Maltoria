@@ -147,12 +147,8 @@ pub fn view<'a>(
 
     let status = if editor.busy || !editor.draft.loaded {
         Some(s().common.processing.to_owned())
-    } else if editor.message.is_some() {
-        editor.message.clone()
     } else {
-        editor
-            .refreshing
-            .then(|| s().app.refreshing_linked.to_owned())
+        editor.message.clone()
     };
 
     if let Some(status) = status {

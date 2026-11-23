@@ -420,7 +420,6 @@ setup_runtime_detail = "Maltoria 用自带的 Wine 运行 Windows 游戏。只�
 setup_container_title = "正在准备容器"
 setup_container_detail = "所有游戏都在同一个容器里运行，已为中日文显示做好设置。"
 create_container = "创建容器"
-refreshing_linked = "正在刷新已关联的资料…"
 
 [maps.provider_label]
 "anthropic" = "Anthropic"

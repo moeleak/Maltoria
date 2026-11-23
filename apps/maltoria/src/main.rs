@@ -309,6 +309,7 @@ fn subscription(app: &App) -> Subscription<Message> {
         || app.clipboard_transition.is_animating()
         || app.removing_transition.is_animating()
         || app.appearance.is_animating()
+        || app.library.syncing.is_some()
     {
         subscriptions.push(iced::window::frames().map(Message::Frame));
     }
@@ -454,6 +455,7 @@ impl App {
 
         bridge.sync_metadata(&container, sources, true, true);
         self.auto_synced.insert(container);
+        self.start_syncing();
     }
 
     /// Finds the metadata of every game that has none, as the sync button
@@ -468,10 +470,24 @@ impl App {
         if sources.is_empty() {
             self.notify(s().dialogs.no_metadata_sources);
         } else {
+            let mut started = false;
             self.with_container(|bridge, container| {
                 bridge.sync_metadata(container, sources, false, true);
+                started = true;
             });
+
+            if started {
+                self.start_syncing();
+            }
             self.notify(s().state.scanning_and_syncing);
+        }
+    }
+
+    /// Shows the loading indicator until the sync finishes or fails. A sync
+    /// asked for while one runs joins it, and the indicator keeps going.
+    fn start_syncing(&mut self) {
+        if self.library.syncing.is_none() {
+            self.library.syncing = Some(progress_bar::IndeterminateState::new(Instant::now()));
         }
     }
 
@@ -580,6 +596,10 @@ fn update(app: &mut App, message: Message) -> Task<Message> {
                 app.removing = None;
             }
             let _ = app.appearance.advance(now);
+
+            if let Some(syncing) = &mut app.library.syncing {
+                syncing.advance(now);
+            }
 
             // A dismissed dialog lets go of its game once it is gone.
             if !app.details_transition.is_active() && app.details.is_some() {
@@ -1386,6 +1406,8 @@ fn metadata_event(app: &mut App, update: MetadataUpdate) -> Task<Message> {
             failed,
             automatic,
         } => {
+            app.library.syncing = None;
+
             if !automatic {
                 if let Some(bridge) = &app.bridge {
                     bridge.load_entries(&container);
@@ -1395,6 +1417,10 @@ fn metadata_event(app: &mut App, update: MetadataUpdate) -> Task<Message> {
                     failed as usize,
                 ));
             }
+        }
+        MetadataUpdate::SyncFailed { reason } => {
+            app.library.syncing = None;
+            app.notify(reason);
         }
         MetadataUpdate::Failed { reason } => app.notify(reason),
         _ => {}
