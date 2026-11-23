@@ -219,39 +219,41 @@ import WhiskyBridgeProtocol
         buttons(in: panel.contentView).first { $0.attributedTitle.string == title }
     }
 
-    // Expanded card starts with 字幕关 and 锁定
-    #expect(buttonTitled("字幕关") != nil)
-    #expect(buttonTitled("锁定") != nil)
+    // The titles are CapturePopupStrings' defaults, which the HUD shows until
+    // the app sends it translated ones. The expanded card starts with
+    // subtitles off and the overlay locked.
+    #expect(buttonTitled("Subs Off") != nil)
+    #expect(buttonTitled("Locked") != nil)
 
     // Toggle from expanded card
-    try #require(buttonTitled("字幕关")).performClick(nil)
+    try #require(buttonTitled("Subs Off")).performClick(nil)
     #expect(overlay.isVisible)
-    #expect(buttonTitled("字幕开") != nil)
+    #expect(buttonTitled("Subs On") != nil)
 
-    try #require(buttonTitled("锁定")).performClick(nil)
+    try #require(buttonTitled("Locked")).performClick(nil)
     #expect(!overlay.clickThrough)
-    #expect(buttonTitled("可拖动") != nil)
+    #expect(buttonTitled("Draggable (Unlocked)") != nil)
 
     // Collapse into floating pill and verify width & quick toggles
-    try #require(buttonTitled("收起")).performClick(nil)
+    try #require(buttonTitled("Collapse")).performClick(nil)
     #expect(hud.isCollapsedForTesting)
     #expect(panel.frame.width == 286)
-    #expect(buttonTitled("字幕开") != nil)
-    #expect(buttonTitled("可拖动") != nil)
-    #expect(buttonTitled("展开") != nil)
+    #expect(buttonTitled("Subs On") != nil)
+    #expect(buttonTitled("Draggable (Unlocked)") != nil)
+    #expect(buttonTitled("Expand") != nil)
 
     // Toggle from pill
-    try #require(buttonTitled("可拖动")).performClick(nil)
+    try #require(buttonTitled("Draggable (Unlocked)")).performClick(nil)
     #expect(overlay.clickThrough)
-    #expect(buttonTitled("锁定") != nil)
+    #expect(buttonTitled("Locked") != nil)
 
     // External GPUI configure call syncs HUD pill automatically
     _ = try overlay.call("translation.overlay.configure", params: [
         "visible": .bool(false),
         "clickThrough": .bool(false)
     ])
-    #expect(buttonTitled("字幕关") != nil)
-    #expect(buttonTitled("可拖动") != nil)
+    #expect(buttonTitled("Subs Off") != nil)
+    #expect(buttonTitled("Draggable (Unlocked)") != nil)
 }
 
 @Test @MainActor func subtitleOverlayMultiLineWrappingTracksPanelWidth() throws {
