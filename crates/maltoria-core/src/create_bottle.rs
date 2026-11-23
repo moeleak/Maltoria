@@ -9,11 +9,11 @@ use serde::Deserialize;
 
 /// Labels shown in the create-bottle Windows version choice, matching the
 /// design sheet order.
-pub(crate) const WINDOWS_LABELS: &[&str] = &["Windows 11", "Windows 10", "Windows 7"];
+pub const WINDOWS_LABELS: &[&str] = &["Windows 11", "Windows 10", "Windows 7"];
 
 /// Map a sheet label (or a raw `WinVersion` value) to the wire value
 /// `bottle.create` accepts. Unknown input falls back to Windows 11.
-pub(crate) fn windows_version_wire(label: &str) -> &'static str {
+pub fn windows_version_wire(label: &str) -> &'static str {
     match label.trim() {
         "Windows 11" | "win11" => "win11",
         "Windows 10" | "win10" => "win10",
@@ -26,7 +26,7 @@ pub(crate) fn windows_version_wire(label: &str) -> &'static str {
 }
 
 /// Pretty path for the create sheet's location row. Home is collapsed to `~`.
-pub(crate) fn display_bottle_location(path: &str) -> String {
+pub fn display_bottle_location(path: &str) -> String {
     let home = dirs_home();
     match home {
         Some(home) if path == home || path.starts_with(&(home.clone() + "/")) => {
@@ -42,27 +42,27 @@ fn dirs_home() -> Option<String> {
 
 /// `bottle.create` job result once `jobs.get` reports `completed`.
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
-pub(crate) struct BottleCreatedDto {
-    pub(crate) path: String,
-    pub(crate) name: String,
+pub struct BottleCreatedDto {
+    pub path: String,
+    pub name: String,
 }
 
 /// One create-bottle job as the sheet tracks it.
 #[derive(Debug, Clone, Default)]
-pub(crate) struct CreateBottleState {
-    pub(crate) job_id: Option<String>,
-    pub(crate) status: Option<crate::scan::JobStatus>,
-    pub(crate) stage: Option<String>,
-    pub(crate) error: Option<String>,
+pub struct CreateBottleState {
+    pub job_id: Option<String>,
+    pub status: Option<crate::scan::JobStatus>,
+    pub stage: Option<String>,
+    pub error: Option<String>,
     /// Set when the job finishes (success or failure) so the sheet can keep
     /// showing the last outcome until the user dismisses or retries.
-    pub(crate) finished: bool,
+    pub finished: bool,
     /// Path of the bottle that was just created, for selection after refresh.
-    pub(crate) created_path: Option<String>,
+    pub created_path: Option<String>,
 }
 
 impl CreateBottleState {
-    pub(crate) fn running(&self) -> bool {
+    pub fn running(&self) -> bool {
         !self.finished
             && self
                 .status
@@ -78,7 +78,7 @@ impl CreateBottleState {
     /// sticky. A terminal update on a fresh state is still accepted so the
     /// helper's job readback after a reconnect lands without a preceding
     /// `Started`.
-    pub(crate) fn apply(&mut self, update: &crate::bridge::BottleCreateUpdate) -> bool {
+    pub fn apply(&mut self, update: &crate::bridge::BottleCreateUpdate) -> bool {
         use crate::bridge::BottleCreateUpdate;
         use crate::scan::JobStatus;
         if self.finished && !matches!(update, BottleCreateUpdate::Started { .. }) {
@@ -120,7 +120,7 @@ impl CreateBottleState {
 /// first, then applies the bridge's rules: non-empty, no `/`, NUL, CR/LF or
 /// other control characters (tab survives), at most 128 UTF-8 bytes. On
 /// success the trimmed name is returned for the wire call.
-pub(crate) fn validate_name(name: &str) -> Result<&str, &'static str> {
+pub fn validate_name(name: &str) -> Result<&str, &'static str> {
     let cb = &crate::i18n::s().create_bottle;
     let trimmed = name.trim();
     if trimmed.is_empty() {
@@ -145,7 +145,7 @@ pub(crate) fn validate_name(name: &str) -> Result<&str, &'static str> {
 }
 
 /// Progress line for the create sheet.
-pub(crate) fn progress_label(status: crate::scan::JobStatus, stage: Option<&str>) -> &'static str {
+pub fn progress_label(status: crate::scan::JobStatus, stage: Option<&str>) -> &'static str {
     use crate::scan::JobStatus;
     let cb = &crate::i18n::s().create_bottle;
     match (status, stage) {

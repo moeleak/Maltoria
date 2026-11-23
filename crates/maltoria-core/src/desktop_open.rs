@@ -2,13 +2,13 @@
 use std::path::PathBuf;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) struct ExternalOpen {
-    pub(crate) path: PathBuf,
-    pub(crate) container: Option<PathBuf>,
-    pub(crate) container_id: Option<String>,
+pub struct ExternalOpen {
+    pub path: PathBuf,
+    pub container: Option<PathBuf>,
+    pub container_id: Option<String>,
 }
 
-pub(crate) fn parse(arguments: &[String]) -> Result<Option<ExternalOpen>, &'static str> {
+pub fn parse(arguments: &[String]) -> Result<Option<ExternalOpen>, &'static str> {
     if arguments.is_empty() {
         return Ok(None);
     }

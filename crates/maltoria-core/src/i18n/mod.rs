@@ -8,17 +8,17 @@ use std::sync::atomic::{AtomicU8, Ordering};
 
 use serde::{Deserialize, Serialize};
 
-pub(crate) mod bridge_errors;
-pub(crate) mod config;
-pub(crate) mod fmt;
-pub(crate) mod strings;
+pub mod bridge_errors;
+pub mod config;
+pub mod fmt;
+pub mod strings;
 
-pub(crate) use strings::Strings;
+pub use strings::Strings;
 
 /// Resolved UI locale used to select translated strings.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Deserialize, Serialize)]
 #[repr(u8)]
-pub(crate) enum Locale {
+pub enum Locale {
     #[default]
     ZhHans = 0,
     Ja = 1,
@@ -32,7 +32,7 @@ pub(crate) enum Locale {
 }
 
 impl Locale {
-    pub(crate) const ALL: [Self; 9] = [
+    pub const ALL: [Self; 9] = [
         Self::ZhHans,
         Self::Ja,
         Self::En,
@@ -58,7 +58,7 @@ impl Locale {
         }
     }
 
-    pub(crate) const fn code(self) -> &'static str {
+    pub const fn code(self) -> &'static str {
         match self {
             Self::ZhHans => "zh-Hans",
             Self::Ja => "ja",
@@ -72,7 +72,7 @@ impl Locale {
         }
     }
 
-    pub(crate) const fn native_name(self) -> &'static str {
+    pub const fn native_name(self) -> &'static str {
         match self {
             Self::ZhHans => "简体中文",
             Self::Ja => "日本語",
@@ -90,7 +90,7 @@ impl Locale {
 /// User-facing interface language preference: follow OS locale or override explicitly.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Deserialize, Serialize)]
 #[repr(u8)]
-pub(crate) enum LanguageMode {
+pub enum LanguageMode {
     #[default]
     #[serde(rename = "system")]
     System = 0,
@@ -115,7 +115,7 @@ pub(crate) enum LanguageMode {
 }
 
 impl LanguageMode {
-    pub(crate) const ALL: [Self; 10] = [
+    pub const ALL: [Self; 10] = [
         Self::System,
         Self::ZhHans,
         Self::Ja,
@@ -143,7 +143,7 @@ impl LanguageMode {
         }
     }
 
-    pub(crate) fn from_wire(raw: &str) -> Self {
+    pub fn from_wire(raw: &str) -> Self {
         let normalized = raw.trim().to_ascii_lowercase().replace('_', "-");
         match normalized.as_str() {
             "" | "system" | "auto" => Self::System,
@@ -169,7 +169,7 @@ impl LanguageMode {
         }
     }
 
-    pub(crate) const fn wire(self) -> &'static str {
+    pub const fn wire(self) -> &'static str {
         match self {
             Self::System => "system",
             Self::ZhHans => "zh-Hans",
@@ -184,7 +184,7 @@ impl LanguageMode {
         }
     }
 
-    pub(crate) fn label(self) -> &'static str {
+    pub fn label(self) -> &'static str {
         match self {
             Self::System => s().settings.language_system,
             Self::ZhHans => "简体中文",
@@ -199,7 +199,7 @@ impl LanguageMode {
         }
     }
 
-    pub(crate) fn options() -> [(&'static str, &'static str); 10] {
+    pub fn options() -> [(&'static str, &'static str); 10] {
         [
             (s().settings.language_system, Self::System.wire()),
             ("简体中文", Self::ZhHans.wire()),
@@ -214,7 +214,7 @@ impl LanguageMode {
         ]
     }
 
-    pub(crate) fn resolve(self) -> Locale {
+    pub fn resolve(self) -> Locale {
         match self {
             Self::System => detect_system_locale(),
             Self::ZhHans => Locale::ZhHans,
@@ -233,7 +233,7 @@ impl LanguageMode {
 static LANGUAGE_MODE: AtomicU8 = AtomicU8::new(LanguageMode::System as u8);
 static ACTIVE_LOCALE: AtomicU8 = AtomicU8::new(Locale::ZhHans as u8);
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 std::thread_local! {
     static TEST_LOCALE_OVERRIDE: std::cell::Cell<Option<Locale>> = const { std::cell::Cell::new(None) };
     static TEST_MODE_OVERRIDE: std::cell::Cell<Option<LanguageMode>> = const { std::cell::Cell::new(None) };
@@ -241,19 +241,19 @@ std::thread_local! {
 
 /// Initialize the active UI language from the saved preference (resolving
 /// `LanguageMode::System` against the OS locale).
-pub(crate) fn init(mode: LanguageMode) -> Locale {
+pub fn init(mode: LanguageMode) -> Locale {
     set_language(mode)
 }
 
 /// Update the active UI language preference and return the resolved `Locale`.
-pub(crate) fn set_language(mode: LanguageMode) -> Locale {
+pub fn set_language(mode: LanguageMode) -> Locale {
     let resolved = mode.resolve();
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     {
         TEST_MODE_OVERRIDE.with(|cell| cell.set(Some(mode)));
         TEST_LOCALE_OVERRIDE.with(|cell| cell.set(Some(resolved)));
     }
-    #[cfg(not(test))]
+    #[cfg(not(any(test, feature = "test-support")))]
     {
         LANGUAGE_MODE.store(mode as u8, Ordering::Relaxed);
         ACTIVE_LOCALE.store(resolved as u8, Ordering::Relaxed);
@@ -261,16 +261,16 @@ pub(crate) fn set_language(mode: LanguageMode) -> Locale {
     resolved
 }
 
-pub(crate) fn language_mode() -> LanguageMode {
-    #[cfg(test)]
+pub fn language_mode() -> LanguageMode {
+    #[cfg(any(test, feature = "test-support"))]
     if let Some(mode) = TEST_MODE_OVERRIDE.with(|cell| cell.get()) {
         return mode;
     }
     LanguageMode::from_u8(LANGUAGE_MODE.load(Ordering::Relaxed))
 }
 
-pub(crate) fn locale() -> Locale {
-    #[cfg(test)]
+pub fn locale() -> Locale {
+    #[cfg(any(test, feature = "test-support"))]
     if let Some(locale) = TEST_LOCALE_OVERRIDE.with(|cell| cell.get()) {
         return locale;
     }
@@ -279,22 +279,22 @@ pub(crate) fn locale() -> Locale {
 
 /// Access the static string table for the current active locale.
 #[inline]
-pub(crate) fn s() -> &'static Strings {
+pub fn s() -> &'static Strings {
     strings::table_for(locale())
 }
 
 /// Plural-category templates stored by generated string tables.
-pub(crate) struct Plural {
-    pub(crate) zero: Option<&'static str>,
-    pub(crate) one: Option<&'static str>,
-    pub(crate) few: Option<&'static str>,
-    pub(crate) many: Option<&'static str>,
-    pub(crate) other: &'static str,
+pub struct Plural {
+    pub zero: Option<&'static str>,
+    pub one: Option<&'static str>,
+    pub few: Option<&'static str>,
+    pub many: Option<&'static str>,
+    pub other: &'static str,
 }
 
 /// CLDR cardinal plural category used to select a `Plural` template.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum PluralCategory {
+pub enum PluralCategory {
     One,
     Few,
     Many,
@@ -303,7 +303,7 @@ pub(crate) enum PluralCategory {
 
 /// CLDR cardinal plural rules for `n` in `locale` (`zero` is handled
 /// separately by `pick_plural` as an explicit n == 0 override).
-pub(crate) fn plural_category(locale: Locale, n: u64) -> PluralCategory {
+pub fn plural_category(locale: Locale, n: u64) -> PluralCategory {
     match locale {
         Locale::ZhHans | Locale::Ja | Locale::Ko => PluralCategory::Other,
         Locale::En | Locale::Es | Locale::It | Locale::De => {
@@ -337,7 +337,7 @@ pub(crate) fn plural_category(locale: Locale, n: u64) -> PluralCategory {
 /// Select the template for `count` from a plural table: `zero` wins for
 /// n == 0 when present, then the locale's CLDR category, falling back to
 /// `other` when that category has no template.
-pub(crate) fn pick_plural(table: &Plural, count: impl PluralCount) -> &'static str {
+pub fn pick_plural(table: &Plural, count: impl PluralCount) -> &'static str {
     let n = count.as_u64();
     if n == 0 && table.zero.is_some() {
         return table.zero.unwrap();
@@ -352,7 +352,7 @@ pub(crate) fn pick_plural(table: &Plural, count: impl PluralCount) -> &'static s
 }
 
 /// Integer argument usable for plural-category selection.
-pub(crate) trait PluralCount: Copy + std::fmt::Display {
+pub trait PluralCount: Copy + std::fmt::Display {
     fn as_u64(self) -> u64;
 }
 
@@ -370,7 +370,7 @@ impl_plural_count!(u8, u16, u32, u64, usize, i8, i16, i32, i64, isize);
 
 /// Substitute `{name}` placeholders in a template; `{{`/`}}` escape literal braces.
 /// Placeholders are validated at build time, so unknown names only trip a debug_assert.
-pub(crate) fn render(
+pub fn render(
     template: &'static str,
     args: &[(&'static str, &dyn std::fmt::Display)],
 ) -> String {
@@ -426,7 +426,7 @@ pub(crate) fn render(
 }
 
 /// Binary-search a generated `maps.*` table (sorted by key at build time).
-pub(crate) fn lookup(
+pub fn lookup(
     map: &'static [(&'static str, &'static str)],
     key: &str,
 ) -> Option<&'static str> {
@@ -436,7 +436,7 @@ pub(crate) fn lookup(
 }
 
 /// Parse a single BCP-47 / POSIX locale tag into one of the supported locales.
-pub(crate) fn parse_locale_tag(raw: &str) -> Option<Locale> {
+pub fn parse_locale_tag(raw: &str) -> Option<Locale> {
     let base = raw
         .trim()
         .split('@')
@@ -475,7 +475,7 @@ pub(crate) fn parse_locale_tag(raw: &str) -> Option<Locale> {
 
 /// Resolve an ordered preference list of language tags. Falls back to English
 /// when no preferred tag matches a supported locale.
-pub(crate) fn locale_from_tags<'a>(tags: impl IntoIterator<Item = &'a str>) -> Locale {
+pub fn locale_from_tags<'a>(tags: impl IntoIterator<Item = &'a str>) -> Locale {
     for tag in tags {
         if let Some(locale) = parse_locale_tag(tag) {
             return locale;
@@ -485,7 +485,7 @@ pub(crate) fn locale_from_tags<'a>(tags: impl IntoIterator<Item = &'a str>) -> L
 }
 
 /// Detect the operating system's preferred language.
-pub(crate) fn detect_system_locale() -> Locale {
+pub fn detect_system_locale() -> Locale {
     if let Ok(explicit) = std::env::var("WHISKY_GPUI_LOCALE")
         && let Some(locale) = parse_locale_tag(&explicit)
     {
@@ -566,15 +566,15 @@ fn macos_preferred_languages() -> Vec<String> {
     out
 }
 
-#[cfg(test)]
-pub(crate) struct LocaleGuard {
+#[cfg(any(test, feature = "test-support"))]
+pub struct LocaleGuard {
     prev_locale: Option<Locale>,
     prev_mode: Option<LanguageMode>,
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 impl LocaleGuard {
-    pub(crate) fn new(locale: Locale) -> Self {
+    pub fn new(locale: Locale) -> Self {
         let prev_locale = TEST_LOCALE_OVERRIDE.with(|cell| cell.replace(Some(locale)));
         let mode = match locale {
             Locale::ZhHans => LanguageMode::ZhHans,
@@ -595,7 +595,7 @@ impl LocaleGuard {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 impl Drop for LocaleGuard {
     fn drop(&mut self) {
         TEST_LOCALE_OVERRIDE.with(|cell| cell.set(self.prev_locale));
@@ -824,75 +824,9 @@ mod tests {
 
 #[cfg(test)]
 mod coverage_tests {
-    //! Every runtime ID the app looks up must have a map entry in every locale.
+    //! Every runtime ID the core looks up must have a map entry in every locale;
+    //! the GPUI app checks the ids it defines itself.
     use super::*;
-
-    #[test]
-    fn provider_spec_kinds_have_labels_and_tips_in_every_locale() {
-        for loc in Locale::ALL {
-            let _guard = LocaleGuard::new(loc);
-            let maps = &s().maps;
-            for spec in crate::translation::PROVIDER_SPECS {
-                assert!(
-                    lookup(maps.provider_label, spec.kind).is_some(),
-                    "{loc:?}: provider_label missing {}",
-                    spec.kind
-                );
-                assert!(
-                    lookup(maps.provider_short_label, spec.kind).is_some(),
-                    "{loc:?}: provider_short_label missing {}",
-                    spec.kind
-                );
-                assert!(
-                    !spec.display_tip().is_empty(),
-                    "{loc:?}: display_tip empty for {}",
-                    spec.kind
-                );
-            }
-        }
-    }
-
-    #[test]
-    fn provider_presets_have_names_and_tags_in_every_locale() {
-        for loc in Locale::ALL {
-            let _guard = LocaleGuard::new(loc);
-            let maps = &s().maps;
-            for preset in crate::translation::PROVIDER_PRESETS {
-                assert!(
-                    lookup(maps.provider_preset_name, preset.id).is_some(),
-                    "{loc:?}: provider_preset_name missing {}",
-                    preset.id
-                );
-                assert!(
-                    lookup(maps.provider_preset_tag, preset.id).is_some(),
-                    "{loc:?}: provider_preset_tag missing {}",
-                    preset.id
-                );
-            }
-        }
-    }
-
-    #[test]
-    fn metadata_source_ids_have_labels_in_every_locale() {
-        for loc in Locale::ALL {
-            let _guard = LocaleGuard::new(loc);
-            let map = s().maps.source_label;
-            let mut ids: std::collections::BTreeSet<&str> =
-                crate::onboarding::SOURCES.iter().copied().collect();
-            ids.extend(crate::metadata_editor::PROVIDERS.iter().copied());
-            ids.extend(
-                crate::state::METADATA_SOURCES
-                    .iter()
-                    .map(|(_, id)| *id),
-            );
-            for id in ids {
-                assert!(
-                    lookup(map, id).is_some(),
-                    "{loc:?}: source_label missing {id}"
-                );
-            }
-        }
-    }
 
     #[test]
     fn config_ids_have_titles_in_every_locale() {

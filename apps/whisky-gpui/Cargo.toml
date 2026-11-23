@@ -12,11 +12,9 @@ serde = { version = "=1.0.229", features = ["derive"] }
 serde_json = "=1.0.154"
 sha2 = "=0.10.9"
 smol = "=2.0.2"
+maltoria-core = { path = "../../crates/maltoria-core" }
 whisky-bridge = { path = "../../crates/whisky-bridge" }
 uuid = { version = "=1.28.0", features = ["v4"] }
-
-[build-dependencies]
-toml = "=1.1.8"
 
 # macOS cover upscaling uses Metal; Linux uses the bundled ncnn helper.
 [target.'cfg(target_os = "linux")'.dependencies]
@@ -30,6 +28,7 @@ metal = "=0.33.0"
 visual-test = ["gpui-kit/test-support"]
 
 [dev-dependencies]
+maltoria-core = { path = "../../crates/maltoria-core", features = ["test-support"] }
 gpui-kit = { version = "=0.8.0", features = ["test-support"] }
 
 [profile.dev]

@@ -8,36 +8,41 @@ use std::time::Duration;
 use gpui_kit::base::{Presence, Spring, spring};
 use gpui_kit::{prelude::*, *};
 
+// The GUI-independent core, under the paths the app has always used.
+pub(crate) use maltoria_core::{
+    bridge,
+    config,
+    container_import,
+    create_bottle,
+    desktop_open,
+    host,
+    i18n,
+    library_layout,
+    library_view,
+    model,
+    onboarding,
+    platform,
+    preferences,
+    processes,
+    program_settings,
+    programs,
+    runtime,
+    scan,
+    winetricks,
+};
+
 mod artwork;
-mod bridge;
 mod capture;
-mod config;
-mod desktop_open;
-mod host;
-mod i18n;
 mod controls;
-mod create_bottle;
-mod container_import;
 mod gallery;
 mod immersive;
-mod library_layout;
-mod library_view;
 #[cfg(target_os = "linux")]
 mod linux_overlay;
 #[cfg(target_os = "linux")]
 mod linux_hud;
-mod model;
 mod metadata_editor;
-mod platform;
 #[cfg(feature = "visual-test")]
 mod motion_capture;
-mod preferences;
-mod onboarding;
-mod processes;
-mod program_settings;
-mod programs;
-mod runtime;
-mod scan;
 mod state;
 mod theme;
 mod translation;
@@ -45,9 +50,10 @@ mod ui_state;
 mod upscale;
 mod views;
 mod windows;
-mod winetricks;
 #[cfg(test)]
 mod headless_state_machine_tests;
+#[cfg(test)]
+mod i18n_coverage_tests;
 
 use crate::controls::{col, icon, row};
 #[cfg(feature = "visual-test")]

@@ -175,6 +175,9 @@ jobs:
           print(f"WHISKY_BRIDGE_HELPER={report['helper']}")
           PY
 
+      - name: Core tests
+        run: cargo test --locked --manifest-path crates/maltoria-core/Cargo.toml
+
       - name: GPUI app tests under Xvfb (software GL)
         run: |
           set -euo pipefail

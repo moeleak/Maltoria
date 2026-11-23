@@ -13,31 +13,31 @@ use serde_json::{Value, json};
 
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct ProgramSettingsDto {
-    pub(crate) container: String,
-    pub(crate) executable: String,
-    pub(crate) program_name: String,
-    pub(crate) locale: String,
-    pub(crate) arguments: String,
+pub struct ProgramSettingsDto {
+    pub container: String,
+    pub executable: String,
+    pub program_name: String,
+    pub locale: String,
+    pub arguments: String,
     #[serde(default)]
-    pub(crate) environment: BTreeMap<String, String>,
+    pub environment: BTreeMap<String, String>,
     /// `null` means the program inherits every override.
     #[serde(default)]
-    pub(crate) overrides: Option<OverridesDto>,
+    pub overrides: Option<OverridesDto>,
     #[serde(default)]
-    pub(crate) defaults: OverridesDto,
+    pub defaults: OverridesDto,
     #[serde(default)]
-    pub(crate) available: bool,
+    pub available: bool,
     /// The user permanently dismissed the legacy fullscreen suggestion.
     #[serde(default)]
-    pub(crate) legacy_fullscreen_dismissed: bool,
+    pub legacy_fullscreen_dismissed: bool,
     /// The latest finished run logged a failed `ChangeDisplaySettings` call.
     #[serde(default)]
-    pub(crate) display_mode_change_failed: bool,
+    pub display_mode_change_failed: bool,
 }
 
 impl ProgramSettingsDto {
-    pub(crate) fn graphics_enabled(&self) -> bool {
+    pub fn graphics_enabled(&self) -> bool {
         let Some(overrides) = &self.overrides else {
             return false;
         };
@@ -48,31 +48,31 @@ impl ProgramSettingsDto {
             || overrides.metal4_enabled.is_some()
     }
 
-    pub(crate) fn upscale_enabled(&self) -> bool {
+    pub fn upscale_enabled(&self) -> bool {
         self.overrides.as_ref().is_some_and(|overrides| {
             overrides.gdi_upscaler.is_some() || overrides.gdi_upscaler_cache.is_some()
         })
     }
 
-    pub(crate) fn sync_enabled(&self) -> bool {
+    pub fn sync_enabled(&self) -> bool {
         self.overrides
             .as_ref()
             .is_some_and(|overrides| overrides.enhanced_sync.is_some())
     }
 
-    pub(crate) fn performance_enabled(&self) -> bool {
+    pub fn performance_enabled(&self) -> bool {
         self.overrides
             .as_ref()
             .is_some_and(|overrides| overrides.shader_cache_enabled.is_some())
     }
 
-    pub(crate) fn input_enabled(&self) -> bool {
+    pub fn input_enabled(&self) -> bool {
         self.overrides
             .as_ref()
             .is_some_and(|overrides| overrides.controller_compatibility_mode.is_some())
     }
 
-    pub(crate) fn display_enabled(&self) -> bool {
+    pub fn display_enabled(&self) -> bool {
         self.overrides.as_ref().is_some_and(|overrides| {
             overrides.virtual_desktop_enabled.is_some() || overrides.resolution_preset.is_some()
         })
@@ -81,153 +81,153 @@ impl ProgramSettingsDto {
     /// Whether the legacy fullscreen prompt should pop for this program: the
     /// latest run failed a display-mode change, the fix is not already forced
     /// on, and the user has not permanently dismissed the suggestion.
-    pub(crate) fn legacy_fullscreen_suggested(&self) -> bool {
+    pub fn legacy_fullscreen_suggested(&self) -> bool {
         self.display_mode_change_failed
             && !self.legacy_fullscreen_dismissed
             && self.overrides.as_ref().and_then(|o| o.emulate_modeset) != Some(true)
     }
 
-    pub(crate) fn dll_enabled(&self) -> bool {
+    pub fn dll_enabled(&self) -> bool {
         self.overrides
             .as_ref()
             .is_some_and(|overrides| overrides.dll_overrides.is_some())
     }
 
     /// Ensure an overrides object exists before a group toggle writes into it.
-    pub(crate) fn overrides_mut(&mut self) -> &mut OverridesDto {
+    pub fn overrides_mut(&mut self) -> &mut OverridesDto {
         self.overrides.get_or_insert_with(OverridesDto::default)
     }
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct OverridesDto {
+pub struct OverridesDto {
     #[serde(default)]
-    pub(crate) graphics_backend: Option<String>,
+    pub graphics_backend: Option<String>,
     #[serde(default)]
-    pub(crate) dxvk: Option<bool>,
+    pub dxvk: Option<bool>,
     #[serde(default)]
-    pub(crate) dxvk_async: Option<bool>,
+    pub dxvk_async: Option<bool>,
     #[serde(default)]
-    pub(crate) dxvk_hud: Option<String>,
+    pub dxvk_hud: Option<String>,
     #[serde(default)]
-    pub(crate) enhanced_sync: Option<String>,
+    pub enhanced_sync: Option<String>,
     #[serde(default)]
-    pub(crate) metal4_enabled: Option<bool>,
+    pub metal4_enabled: Option<bool>,
     #[serde(default)]
-    pub(crate) gdi_upscaler: Option<String>,
+    pub gdi_upscaler: Option<String>,
     #[serde(default)]
-    pub(crate) gdi_upscaler_cache: Option<String>,
+    pub gdi_upscaler_cache: Option<String>,
     #[serde(default)]
-    pub(crate) shader_cache_enabled: Option<bool>,
+    pub shader_cache_enabled: Option<bool>,
     #[serde(default)]
-    pub(crate) controller_compatibility_mode: Option<bool>,
+    pub controller_compatibility_mode: Option<bool>,
     #[serde(default)]
-    pub(crate) disable_hidapi: Option<bool>,
+    pub disable_hidapi: Option<bool>,
     #[serde(default)]
-    pub(crate) allow_background_events: Option<bool>,
+    pub allow_background_events: Option<bool>,
     #[serde(default)]
-    pub(crate) disable_controller_mapping: Option<bool>,
+    pub disable_controller_mapping: Option<bool>,
     #[serde(default)]
-    pub(crate) use_button_labels: Option<bool>,
+    pub use_button_labels: Option<bool>,
     #[serde(default)]
-    pub(crate) emulate_modeset: Option<bool>,
+    pub emulate_modeset: Option<bool>,
     #[serde(default)]
-    pub(crate) virtual_desktop_enabled: Option<bool>,
+    pub virtual_desktop_enabled: Option<bool>,
     #[serde(default)]
-    pub(crate) resolution_preset: Option<String>,
+    pub resolution_preset: Option<String>,
     #[serde(default)]
-    pub(crate) custom_resolution_width: Option<i64>,
+    pub custom_resolution_width: Option<i64>,
     #[serde(default)]
-    pub(crate) custom_resolution_height: Option<i64>,
+    pub custom_resolution_height: Option<i64>,
     #[serde(default)]
-    pub(crate) dll_overrides: Option<Vec<DllOverrideDto>>,
+    pub dll_overrides: Option<Vec<DllOverrideDto>>,
     #[serde(default)]
-    pub(crate) tagged_verbs: Option<Vec<String>>,
+    pub tagged_verbs: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct DllOverrideDto {
-    pub(crate) dll_name: String,
+pub struct DllOverrideDto {
+    pub dll_name: String,
     #[serde(default)]
-    pub(crate) mode: String,
+    pub mode: String,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct HistoryDto {
+pub struct HistoryDto {
     #[serde(default)]
-    pub(crate) entries: Vec<RunEntryDto>,
+    pub entries: Vec<RunEntryDto>,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct RunEntryDto {
-    pub(crate) id: String,
+pub struct RunEntryDto {
+    pub id: String,
     #[serde(default)]
-    pub(crate) program_name: String,
+    pub program_name: String,
     #[serde(default)]
-    pub(crate) log_path: String,
+    pub log_path: String,
     #[serde(default)]
-    pub(crate) start_time: f64,
+    pub start_time: f64,
     #[serde(default)]
-    pub(crate) end_time: Option<f64>,
+    pub end_time: Option<f64>,
     #[serde(default)]
-    pub(crate) exit_code: Option<i32>,
+    pub exit_code: Option<i32>,
     #[serde(default)]
-    pub(crate) duration: Option<f64>,
+    pub duration: Option<f64>,
     #[serde(default)]
-    pub(crate) has_wine_debug_output: bool,
+    pub has_wine_debug_output: bool,
     #[serde(default)]
-    pub(crate) display_mode_change_failed: bool,
+    pub display_mode_change_failed: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct EnvRow {
-    pub(crate) id: u64,
-    pub(crate) key: String,
-    pub(crate) value: String,
+pub struct EnvRow {
+    pub id: u64,
+    pub key: String,
+    pub value: String,
 }
 
 /// One open run-settings sheet. The draft is replaced only by a successful
 /// bridge read or save reply.
 #[derive(Default)]
-pub(crate) struct ProgramSettingsPage {
-    pub(crate) container: Option<String>,
-    pub(crate) executable: Option<String>,
-    pub(crate) title: String,
-    pub(crate) settings: Option<ProgramSettingsDto>,
+pub struct ProgramSettingsPage {
+    pub container: Option<String>,
+    pub executable: Option<String>,
+    pub title: String,
+    pub settings: Option<ProgramSettingsDto>,
     /// Snapshot of the last loaded or saved settings for dirty-state detection.
-    pub(crate) baseline: Option<ProgramSettingsDto>,
-    pub(crate) loading: bool,
-    pub(crate) saving: bool,
-    pub(crate) error: Option<String>,
-    pub(crate) env_rows: Vec<EnvRow>,
-    pub(crate) next_env_id: u64,
-    pub(crate) history: Vec<RunEntryDto>,
-    pub(crate) history_error: Option<String>,
-    pub(crate) history_loading: bool,
-    pub(crate) dll_new_mode: String,
-    pub(crate) shortcut_destination: String,
-    pub(crate) close_after_save: bool,
+    pub baseline: Option<ProgramSettingsDto>,
+    pub loading: bool,
+    pub saving: bool,
+    pub error: Option<String>,
+    pub env_rows: Vec<EnvRow>,
+    pub next_env_id: u64,
+    pub history: Vec<RunEntryDto>,
+    pub history_error: Option<String>,
+    pub history_loading: bool,
+    pub dll_new_mode: String,
+    pub shortcut_destination: String,
+    pub close_after_save: bool,
     /// Queued `(game_index, executable)` switch waiting for an auto-save before switching targets.
-    pub(crate) pending_switch: Option<(usize, String)>,
-    pub(crate) shortcut_path: Option<String>,
-    pub(crate) shortcut_error: Option<String>,
+    pub pending_switch: Option<(usize, String)>,
+    pub shortcut_path: Option<String>,
+    pub shortcut_error: Option<String>,
     /// Last measured size of the GDI upscaler disk cache for this program.
-    pub(crate) cache_bytes: Option<u64>,
+    pub cache_bytes: Option<u64>,
     /// A background walk of the cache directory is in flight.
-    pub(crate) cache_pending: bool,
+    pub cache_pending: bool,
     /// A background clear of the cache directory is in flight.
-    pub(crate) cache_clearing: bool,
+    pub cache_clearing: bool,
     /// Bumped whenever the target or a measurement starts; stale workers drop
     /// their result when it no longer matches.
-    pub(crate) cache_generation: u64,
+    pub cache_generation: u64,
 }
 
 impl ProgramSettingsPage {
-    pub(crate) fn start(
+    pub fn start(
         &mut self,
         container: &str,
         executable: &str,
@@ -257,7 +257,7 @@ impl ProgramSettingsPage {
         self.cache_generation += 1;
     }
 
-    pub(crate) fn apply_settings(&mut self, settings: ProgramSettingsDto) {
+    pub fn apply_settings(&mut self, settings: ProgramSettingsDto) {
         #[cfg(target_os = "linux")]
         let mut settings = settings;
         #[cfg(target_os = "linux")]
@@ -292,7 +292,7 @@ impl ProgramSettingsPage {
         self.error = None;
     }
 
-    pub(crate) fn set_region_picker_mode(&mut self, value: String) {
+    pub fn set_region_picker_mode(&mut self, value: String) {
         const KEY: &str = "WINE_GDI_UPSCALER_PICK";
         if let Some(row) = self.env_rows.iter_mut().find(|row| row.key == KEY) {
             row.value = value;
@@ -303,7 +303,7 @@ impl ProgramSettingsPage {
         }
     }
 
-    pub(crate) fn region_picker_mode(&self) -> &str {
+    pub fn region_picker_mode(&self) -> &str {
         self.env_rows.iter().find(|row| row.key == "WINE_GDI_UPSCALER_PICK")
             .map(|row| row.value.as_str()).unwrap_or("auto")
     }
@@ -321,7 +321,7 @@ impl ProgramSettingsPage {
     /// `WINE_GDI_CACHE_DIRECTORY` overrides the default Caches root, and the
     /// leaf is a hash of `WINEPREFIX` + `WINE_GDI_CACHE_GAME` (the resolved
     /// executable path, unless the env draft overrides it).
-    pub(crate) fn gdi_cache_dir(&self) -> Option<PathBuf> {
+    pub fn gdi_cache_dir(&self) -> Option<PathBuf> {
         let prefix = self.container.as_deref().filter(|value| !value.is_empty())?;
         let root = self
             .env_value("WINE_GDI_CACHE_DIRECTORY")
@@ -342,17 +342,17 @@ impl ProgramSettingsPage {
 
     /// Cache written by older Wine launches without HOME. The namespace is
     /// identical even when the program uses a custom root for future launches.
-    pub(crate) fn legacy_gdi_cache_dir(&self) -> Option<PathBuf> {
+    pub fn legacy_gdi_cache_dir(&self) -> Option<PathBuf> {
         let leaf = self.gdi_cache_dir()?.file_name()?.to_owned();
         let legacy = PathBuf::from("/tmp/Library/Caches/com.isaacmarovitz.Whisky/GDIUpscaler").join(leaf);
         (self.gdi_cache_dir()? != legacy).then_some(legacy)
     }
 
-    pub(crate) fn gdi_cache_dirs(&self) -> Vec<PathBuf> {
+    pub fn gdi_cache_dirs(&self) -> Vec<PathBuf> {
         self.gdi_cache_dir().into_iter().chain(self.legacy_gdi_cache_dir()).collect()
     }
 
-    pub(crate) fn fail(&mut self, reason: String) {
+    pub fn fail(&mut self, reason: String) {
         if self.saving {
             self.saving = false;
         } else {
@@ -361,13 +361,13 @@ impl ProgramSettingsPage {
         self.error = Some(reason);
     }
 
-    pub(crate) fn apply_history(&mut self, history: HistoryDto) {
+    pub fn apply_history(&mut self, history: HistoryDto) {
         self.history = history.entries;
         self.history_loading = false;
         self.history_error = None;
     }
 
-    pub(crate) fn history_entries_newest_first(&self) -> Vec<&RunEntryDto> {
+    pub fn history_entries_newest_first(&self) -> Vec<&RunEntryDto> {
         self.history.iter().rev().collect()
     }
 }
@@ -397,7 +397,7 @@ fn cache_namespace(prefix: &str, game: &str) -> String {
 
 /// Recursive size of `path`, following directories only (symlinks count as
 /// their own link entry and are never traversed).
-pub(crate) fn dir_size(path: &Path) -> u64 {
+pub fn dir_size(path: &Path) -> u64 {
     fn walk(path: &Path, total: &mut u64) {
         let Ok(entries) = std::fs::read_dir(path) else {
             return;
@@ -421,7 +421,7 @@ pub(crate) fn dir_size(path: &Path) -> u64 {
 }
 
 /// Coordinate with Wine's lock and generation counter while clearing records.
-pub(crate) fn clear_dir(path: &Path) -> std::io::Result<()> {
+pub fn clear_dir(path: &Path) -> std::io::Result<()> {
     if !path.exists() {
         return Ok(());
     }
@@ -449,7 +449,7 @@ pub(crate) fn clear_dir(path: &Path) -> std::io::Result<()> {
     Ok(())
 }
 
-pub(crate) fn format_size(bytes: u64) -> String {
+pub fn format_size(bytes: u64) -> String {
     const UNITS: [&str; 4] = ["B", "KB", "MB", "GB"];
     let mut value = bytes as f64;
     let mut unit = 0;
@@ -464,7 +464,7 @@ pub(crate) fn format_size(bytes: u64) -> String {
     }
 }
 
-pub(crate) fn default_shortcut_destination() -> String {
+pub fn default_shortcut_destination() -> String {
     #[cfg(target_os = "linux")]
     {
         let home = std::env::var_os("HOME")
@@ -489,7 +489,7 @@ pub(crate) fn default_shortcut_destination() -> String {
     }
 }
 
-pub(crate) fn expand_home(path: &str) -> String {
+pub fn expand_home(path: &str) -> String {
     let Some(home) = std::env::var_os("HOME").map(|home| home.to_string_lossy().into_owned()) else {
         return path.to_owned();
     };
@@ -505,7 +505,7 @@ pub(crate) fn expand_home(path: &str) -> String {
 /// Build the one patch the bridge applies atomically. Every override field is
 /// sent, with `null` clearing inheritance, so a value removed in the sheet is
 /// removed from storage instead of surviving as a stale key.
-pub(crate) fn settings_patch(
+pub fn settings_patch(
     settings: &ProgramSettingsDto,
     arguments: &str,
     environment: &BTreeMap<String, String>,
@@ -557,7 +557,7 @@ pub(crate) fn settings_patch(
 
 /// Canonicalizes `settings_patch` for dirty-checking so empty overrides or
 /// `emulateModeset: false` compare equal to inherited `null`.
-pub(crate) fn normalized_patch_for_dirty_check(
+pub fn normalized_patch_for_dirty_check(
     settings: &ProgramSettingsDto,
     arguments: &str,
     environment: &BTreeMap<String, String>,
@@ -574,7 +574,7 @@ pub(crate) fn normalized_patch_for_dirty_check(
     patch
 }
 
-pub(crate) fn locale_label(raw: &str) -> &str {
+pub fn locale_label(raw: &str) -> &str {
     match raw {
         "" => crate::i18n::s().program_settings.locale_auto,
         "ja_JP.UTF-8" => "日本語",
@@ -593,7 +593,7 @@ pub(crate) fn locale_label(raw: &str) -> &str {
     }
 }
 
-pub(crate) fn graphics_label(raw: &str) -> &str {
+pub fn graphics_label(raw: &str) -> &str {
     match raw {
         "recommended" => crate::i18n::s().program_settings.gfx_recommended,
         "d3dMetal" => "D3DMetal",
@@ -604,7 +604,7 @@ pub(crate) fn graphics_label(raw: &str) -> &str {
     }
 }
 
-pub(crate) fn upscaler_label(raw: &str) -> &str {
+pub fn upscaler_label(raw: &str) -> &str {
     match raw {
         "off" => crate::i18n::s().common.off,
         "metalfx" => "MetalFX Spatial",
@@ -619,14 +619,14 @@ pub(crate) fn upscaler_label(raw: &str) -> &str {
     }
 }
 
-pub(crate) fn cache_label(raw: &str) -> &str {
+pub fn cache_label(raw: &str) -> &str {
     match raw {
         "off" | "memory" | "persistent" => crate::i18n::config::option_title("gdiUpscalerCache", raw, raw),
         other => other,
     }
 }
 
-pub(crate) fn hud_label(raw: &str) -> &str {
+pub fn hud_label(raw: &str) -> &str {
     let ps = &crate::i18n::s().program_settings;
     match raw {
         "full" => ps.hud_full,
@@ -637,7 +637,7 @@ pub(crate) fn hud_label(raw: &str) -> &str {
     }
 }
 
-pub(crate) fn sync_label(raw: &str) -> &str {
+pub fn sync_label(raw: &str) -> &str {
     match raw {
         "none" => crate::i18n::s().common.off,
         "esync" => "ESync",
@@ -647,7 +647,7 @@ pub(crate) fn sync_label(raw: &str) -> &str {
     }
 }
 
-pub(crate) fn resolution_label(raw: &str) -> &str {
+pub fn resolution_label(raw: &str) -> &str {
     match raw {
         "r1280x720" => "1280 × 720",
         "r1600x900" => "1600 × 900",
@@ -659,7 +659,7 @@ pub(crate) fn resolution_label(raw: &str) -> &str {
     }
 }
 
-pub(crate) fn dll_mode_label(raw: &str) -> &str {
+pub fn dll_mode_label(raw: &str) -> &str {
     let ps = &crate::i18n::s().program_settings;
     match raw {
         "b" => ps.dll_builtin_only,
@@ -671,7 +671,7 @@ pub(crate) fn dll_mode_label(raw: &str) -> &str {
     }
 }
 
-pub(crate) fn relative_time(unix_seconds: f64) -> String {
+pub fn relative_time(unix_seconds: f64) -> String {
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|duration| duration.as_secs_f64())
@@ -685,7 +685,7 @@ pub(crate) fn relative_time(unix_seconds: f64) -> String {
     }
 }
 
-pub(crate) fn duration_label(seconds: Option<f64>) -> String {
+pub fn duration_label(seconds: Option<f64>) -> String {
     let Some(seconds) = seconds.filter(|seconds| *seconds >= 0.0) else {
         return crate::i18n::s().runtime.running.to_owned();
     };

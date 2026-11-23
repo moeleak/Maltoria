@@ -2,7 +2,7 @@
 
 
 /// Localized bottle configuration section title for `section_id`.
-pub(crate) fn section_title(section_id: &str) -> &'static str {
+pub fn section_title(section_id: &str) -> &'static str {
     let map = crate::i18n::s().maps.config_section;
     crate::i18n::lookup(map, section_id)
         .or_else(|| crate::i18n::lookup(map, "other"))
@@ -10,7 +10,7 @@ pub(crate) fn section_title(section_id: &str) -> &'static str {
 }
 
 /// Field id → `maps.config_field` key for fields whose wire `titleKey` is empty.
-pub(crate) const FIELD_TITLE_KEYS: &[(&str, &str)] = &[
+pub const FIELD_TITLE_KEYS: &[(&str, &str)] = &[
     ("windowsVersion", "config.field.windowsVersion"),
     ("enhancedSync", "config.field.enhancedSync"),
     ("asfTimestampBase", "config.field.asfTimestampBase"),
@@ -80,7 +80,7 @@ pub(crate) const FIELD_TITLE_KEYS: &[(&str, &str)] = &[
 ];
 
 /// Localized bottle configuration field title, falling back to the wire `fallback`.
-pub(crate) fn field_title<'a>(title_key: &str, id: &str, fallback: &'a str) -> &'a str {
+pub fn field_title<'a>(title_key: &str, id: &str, fallback: &'a str) -> &'a str {
     let key = if !title_key.is_empty() {
         title_key
     } else {
@@ -94,7 +94,7 @@ pub(crate) fn field_title<'a>(title_key: &str, id: &str, fallback: &'a str) -> &
 }
 
 /// Localized bottle configuration choice option title.
-pub(crate) fn option_title<'a>(
+pub fn option_title<'a>(
     field_id: &str,
     option_id: &str,
     fallback: &'a str,
@@ -107,7 +107,7 @@ pub(crate) fn option_title<'a>(
 }
 
 /// Localized Wine engine feature name.
-pub(crate) fn engine_feature_label(id: &str) -> &str {
+pub fn engine_feature_label(id: &str) -> &str {
     crate::i18n::lookup(crate::i18n::s().maps.config_feature, id).unwrap_or(id)
 }
 

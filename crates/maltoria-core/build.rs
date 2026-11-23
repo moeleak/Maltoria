@@ -352,12 +352,12 @@ fn main() {
     // Section structs.
     for (sec, entries) in &parsed["en"].0 {
         let ty = format!("{}Strings", pascal(sec));
-        out.push_str(&format!("pub(crate) struct {ty} {{\n"));
+        out.push_str(&format!("pub struct {ty} {{\n"));
         for (key, entry) in entries {
             match entry {
-                Entry::Scalar(_) => out.push_str(&format!("    pub(crate) {key}: &'static str,\n")),
+                Entry::Scalar(_) => out.push_str(&format!("    pub {key}: &'static str,\n")),
                 Entry::Array(items) => out.push_str(&format!(
-                    "    pub(crate) {key}: [&'static str; {}],\n",
+                    "    pub {key}: [&'static str; {}],\n",
                     items.len()
                 )),
                 Entry::Template(..) => {
@@ -394,7 +394,7 @@ fn main() {
                 })
                 .collect();
             impls.push_str(&format!(
-                "    pub(crate) fn {key}(&self, {}) -> String {{\n",
+                "    pub fn {key}(&self, {}) -> String {{\n",
                 sig.join(", ")
             ));
             let args: Vec<String> = params
@@ -420,20 +420,20 @@ fn main() {
     }
 
     // Maps struct.
-    out.push_str("pub(crate) struct Maps {\n");
+    out.push_str("pub struct Maps {\n");
     for map_name in parsed["en"].1.keys() {
         out.push_str(&format!(
-            "    pub(crate) {map_name}: &'static [(&'static str, &'static str)],\n"
+            "    pub {map_name}: &'static [(&'static str, &'static str)],\n"
         ));
     }
     out.push_str("}\n\n");
 
     // Aggregate.
-    out.push_str("pub(crate) struct Strings {\n");
+    out.push_str("pub struct Strings {\n");
     for sec in parsed["en"].0.keys() {
-        out.push_str(&format!("    pub(crate) {sec}: {}Strings,\n", pascal(sec)));
+        out.push_str(&format!("    pub {sec}: {}Strings,\n", pascal(sec)));
     }
-    out.push_str("    pub(crate) maps: Maps,\n}\n\n");
+    out.push_str("    pub maps: Maps,\n}\n\n");
 
     // Per-locale statics (en first for stable output order).
     let mut ordered: Vec<String> = vec!["en".to_string()];
@@ -491,7 +491,7 @@ fn main() {
     // table_for: variant names come from file stems, so a locale file without a
     // matching `Locale` variant (or vice versa) fails to compile.
     out.push_str(
-        "pub(crate) fn table_for(locale: Locale) -> &'static Strings {\n    match locale {\n",
+        "pub fn table_for(locale: Locale) -> &'static Strings {\n    match locale {\n",
     );
     for stem in &ordered {
         out.push_str(&format!(

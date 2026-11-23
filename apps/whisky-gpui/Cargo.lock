@@ -3986,6 +3986,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "maltoria-core"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "smol",
+ "toml 1.1.8+spec-1.1.0",
+ "whisky-bridge",
+]
+
+[[package]]
 name = "markdown"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7941,13 +7954,13 @@ dependencies = [
  "chrono",
  "gpui-kit",
  "image",
+ "maltoria-core",
  "metal",
  "raw-window-handle",
  "serde",
  "serde_json",
  "sha2 0.10.9",
  "smol",
- "toml 1.1.8+spec-1.1.0",
  "uuid",
  "whisky-bridge",
  "x11rb",

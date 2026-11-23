@@ -19,15 +19,15 @@ use crate::model::Game;
 /// in `Service.swift`). Library reads are `library.entries` with a `container`
 /// path; there is no separate activity method — each entry carries its
 /// `activity` snapshot. The allow-list is checked against wire names.
-pub(crate) const REQUIRED_METHODS: &[&str] = &["workspace.containers", "library.entries"];
+pub const REQUIRED_METHODS: &[&str] = &["workspace.containers", "library.entries"];
 
 /// Methods the headless runtime probe cannot work without.
-pub(crate) const RUNTIME_METHODS: &[&str] = &["runtime.snapshot"];
+pub const RUNTIME_METHODS: &[&str] = &["runtime.snapshot"];
 
 /// The full runtime surface this frontend drives (`RuntimeService.methods`).
 /// Checked before `--runtime-watch` so the probe fails with a clear message
 /// instead of a remote `method_unavailable`.
-pub(crate) const RUNTIME_SESSION_METHODS: &[&str] = &[
+pub const RUNTIME_SESSION_METHODS: &[&str] = &[
     "runtime.configure",
     "runtime.snapshot",
     "runtime.events",
@@ -38,26 +38,26 @@ pub(crate) const RUNTIME_SESSION_METHODS: &[&str] = &[
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct DescribeResponse {
-    pub(crate) protocol_version: u32,
-    pub(crate) platform: String,
+pub struct DescribeResponse {
+    pub protocol_version: u32,
+    pub platform: String,
     #[serde(default)]
-    pub(crate) methods: Vec<String>,
+    pub methods: Vec<String>,
     #[serde(default)]
-    pub(crate) capabilities: Vec<String>,
-    pub(crate) maximum_frame_bytes: usize,
+    pub capabilities: Vec<String>,
+    pub maximum_frame_bytes: usize,
     #[serde(default)]
-    pub(crate) registry: String,
+    pub registry: String,
     #[serde(default)]
-    pub(crate) date_unit: String,
+    pub date_unit: String,
     #[serde(default)]
-    pub(crate) path_format: String,
+    pub path_format: String,
 }
 
 impl DescribeResponse {
     /// `whisky-bridge::Client` performs the handshake while spawning. Reuse its
     /// validated capabilities instead of sending `bridge.describe` twice.
-    pub(crate) fn from_capabilities(capabilities: &Capabilities) -> Self {
+    pub fn from_capabilities(capabilities: &Capabilities) -> Self {
         Self {
             protocol_version: capabilities.protocol_version,
             platform: capabilities.platform.clone(),
@@ -71,12 +71,12 @@ impl DescribeResponse {
     }
 
     /// Required methods absent from the advertised allow-list.
-    pub(crate) fn missing_required_methods(&self) -> Vec<&'static str> {
+    pub fn missing_required_methods(&self) -> Vec<&'static str> {
         self.missing_methods(REQUIRED_METHODS)
     }
 
     /// The subset of `required` the helper does not advertise.
-    pub(crate) fn missing_methods(&self, required: &[&'static str]) -> Vec<&'static str> {
+    pub fn missing_methods(&self, required: &[&'static str]) -> Vec<&'static str> {
         required
             .iter()
             .copied()
@@ -91,24 +91,24 @@ impl DescribeResponse {
 /// cursor. Unknown keys are ignored so the helper can grow the payload.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct RuntimeSnapshotDto {
+pub struct RuntimeSnapshotDto {
     #[serde(default)]
-    pub(crate) sequence: String,
+    pub sequence: String,
     #[serde(default)]
-    pub(crate) entries: Vec<RuntimeEntryDto>,
+    pub entries: Vec<RuntimeEntryDto>,
     #[serde(default)]
-    pub(crate) query_failures: BTreeMap<String, String>,
+    pub query_failures: BTreeMap<String, String>,
 }
 
 /// Per-entry runtime state; `capabilities` is the `LibraryRuntimeCapabilities`
 /// option-set bitmask.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct RuntimeEntryDto {
-    pub(crate) id: String,
-    pub(crate) state: String,
+pub struct RuntimeEntryDto {
+    pub id: String,
+    pub state: String,
     #[serde(default)]
-    pub(crate) capabilities: i64,
+    pub capabilities: i64,
 }
 
 /// One `runtime.events` result (`RuntimeService.runtimeEvents`).
@@ -119,31 +119,31 @@ pub(crate) struct RuntimeEntryDto {
 /// is normal.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct RuntimeEventBatchDto {
+pub struct RuntimeEventBatchDto {
     #[serde(default)]
-    pub(crate) sequence: String,
+    pub sequence: String,
     #[serde(default)]
-    pub(crate) resync_required: bool,
+    pub resync_required: bool,
     #[serde(default)]
-    pub(crate) events: Vec<RuntimeEventDto>,
+    pub events: Vec<RuntimeEventDto>,
     /// The service always includes it; optional here so a truncated frame
     /// cannot take the session down.
     #[serde(default)]
-    pub(crate) snapshot: Option<RuntimeSnapshotDto>,
+    pub snapshot: Option<RuntimeSnapshotDto>,
 }
 
 /// One buffered event. The helper wraps the payload as `{sequence, event}`;
 /// the sequence is redundant with the batch cursor, so only the payload is kept.
 #[derive(Debug, Clone, Deserialize)]
-pub(crate) struct RuntimeEventDto {
-    pub(crate) event: RuntimeEventPayloadDto,
+pub struct RuntimeEventDto {
+    pub event: RuntimeEventPayloadDto,
 }
 
 /// `RuntimeService.encodeEvent` tags each payload with `kind`. Unknown kinds are
 /// tolerated: a newer helper may publish events this build cannot interpret.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
-pub(crate) enum RuntimeEventPayloadDto {
+pub enum RuntimeEventPayloadDto {
     /// A complete state snapshot, not a delta.
     State { value: RuntimeSnapshotDto },
     LaunchResult {
@@ -165,64 +165,64 @@ pub(crate) enum RuntimeEventPayloadDto {
 /// `runtime.launch` reply: either `{accepted, entryID}` or the clipboard
 /// prompt `{accepted: false, interaction: {…}}` from `LaunchInteractionBroker`.
 #[derive(Debug, Clone, Deserialize)]
-pub(crate) struct LaunchReplyDto {
+pub struct LaunchReplyDto {
     #[serde(default)]
-    pub(crate) accepted: bool,
+    pub accepted: bool,
     #[serde(default)]
-    pub(crate) backend: Option<String>,
+    pub backend: Option<String>,
     /// The backend the launch resolved before availability applied, present
     /// only when it cannot run — `backend` is the fallback it landed on.
     #[serde(default, rename = "backendFrom")]
-    pub(crate) backend_from: Option<String>,
+    pub backend_from: Option<String>,
     #[serde(default)]
-    pub(crate) interaction: Option<ClipboardInteractionDto>,
+    pub interaction: Option<ClipboardInteractionDto>,
 }
 
 /// The clipboard prompt payload. `kind` is `"clipboard"`; the token is one-use
 /// and must be echoed back verbatim.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct ClipboardInteractionDto {
-    pub(crate) kind: String,
-    pub(crate) token: String,
+pub struct ClipboardInteractionDto {
+    pub kind: String,
+    pub token: String,
     #[serde(default)]
-    pub(crate) content_type: String,
+    pub content_type: String,
     #[serde(default)]
-    pub(crate) size_bytes: i64,
+    pub size_bytes: i64,
     #[serde(default)]
-    pub(crate) preview: Option<String>,
+    pub preview: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct Container {
-    pub(crate) path: String,
-    pub(crate) name: String,
+pub struct Container {
+    pub path: String,
+    pub name: String,
     #[serde(default)]
-    pub(crate) available: bool,
+    pub available: bool,
 }
 
-pub(crate) type ContainerList = Vec<Container>;
+pub type ContainerList = Vec<Container>;
 
 /// `preferences.schema`: the keys the helper will accept on `preferences.set`.
 /// Anything outside this set has no persistence and must stay in memory.
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct PreferencesSchemaDto {
+pub struct PreferencesSchemaDto {
     #[serde(default)]
-    pub(crate) booleans: BTreeMap<String, bool>,
+    pub booleans: BTreeMap<String, bool>,
     #[serde(default)]
-    pub(crate) strings: BTreeMap<String, String>,
+    pub strings: BTreeMap<String, String>,
     /// Numeric preferences, such as the chosen cover width.
     #[serde(default)]
-    pub(crate) numbers: BTreeMap<String, f64>,
+    pub numbers: BTreeMap<String, f64>,
     #[serde(default)]
-    pub(crate) paths: Vec<String>,
+    pub paths: Vec<String>,
 }
 
 impl PreferencesSchemaDto {
     /// Every key the helper advertises, regardless of its type.
-    pub(crate) fn keys(&self) -> impl Iterator<Item = &str> {
+    pub fn keys(&self) -> impl Iterator<Item = &str> {
         self.booleans
             .keys()
             .chain(self.strings.keys())
@@ -235,22 +235,22 @@ impl PreferencesSchemaDto {
 /// `system.info`: packaged application metadata for the About panel.
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct SystemInfoDto {
+pub struct SystemInfoDto {
     #[serde(default)]
-    pub(crate) app_name: String,
+    pub app_name: String,
     #[serde(default)]
-    pub(crate) app_version: String,
+    pub app_version: String,
     #[serde(default)]
-    pub(crate) build: String,
+    pub build: String,
     #[serde(default)]
-    pub(crate) bundle_identifier: String,
+    pub bundle_identifier: String,
     #[serde(default)]
-    pub(crate) os_version: String,
+    pub os_version: String,
 }
 
 impl SystemInfoDto {
     /// Version text for the About panel; never blank.
-    pub(crate) fn version_label(&self) -> String {
+    pub fn version_label(&self) -> String {
         match (self.app_version.is_empty(), self.build.is_empty()) {
             (true, _) => crate::i18n::s().dialogs.preview_badge.into(),
             (false, true) => self.app_version.clone(),
@@ -262,78 +262,78 @@ impl SystemInfoDto {
 /// `entry.hidden` reply. The record, not the request, is what the UI stores.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct HiddenReplyDto {
+pub struct HiddenReplyDto {
     #[serde(rename = "entryID")]
-    pub(crate) entry_id: String,
-    pub(crate) hidden: bool,
+    pub entry_id: String,
+    pub hidden: bool,
 }
 
 /// `entry.tags` reply.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct EntryTagsReplyDto {
+pub struct EntryTagsReplyDto {
     #[serde(rename = "entryID")]
-    pub(crate) entry_id: String,
+    pub entry_id: String,
     #[serde(default)]
-    pub(crate) tags: Vec<String>,
+    pub tags: Vec<String>,
 }
 
 /// `entry.launchOptions` reply.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct LaunchOptionsReplyDto {
+pub struct LaunchOptionsReplyDto {
     #[serde(rename = "entryID")]
-    pub(crate) entry_id: String,
+    pub entry_id: String,
     #[serde(default)]
-    pub(crate) multi_executable: bool,
+    pub multi_executable: bool,
     #[serde(default)]
-    pub(crate) executables: Vec<String>,
+    pub executables: Vec<String>,
     #[serde(default)]
-    pub(crate) last_executable: Option<String>,
+    pub last_executable: Option<String>,
 }
 
 /// `library.tags.rename` reply.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct TagRenameReplyDto {
+pub struct TagRenameReplyDto {
     #[serde(default)]
-    pub(crate) updated: u64,
+    pub updated: u64,
     #[serde(default)]
-    pub(crate) old_tag: String,
+    pub old_tag: String,
     #[serde(default)]
-    pub(crate) new_tag: String,
+    pub new_tag: String,
 }
 
 /// `library.tags.delete` reply.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct TagDeleteReplyDto {
+pub struct TagDeleteReplyDto {
     #[serde(default)]
-    pub(crate) updated: u64,
+    pub updated: u64,
     #[serde(default)]
-    pub(crate) tag: String,
+    pub tag: String,
 }
 
 /// `folders.read` and every `folders.*` mutation reply
 /// (`Service+Folders.encodeFolders`).
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct FoldersDto {
+pub struct FoldersDto {
     #[serde(default)]
-    pub(crate) roots: Vec<String>,
+    pub roots: Vec<String>,
     #[serde(default)]
-    pub(crate) assigned_folders: Vec<String>,
+    pub assigned_folders: Vec<String>,
     #[serde(default)]
-    pub(crate) excluded_folders: Vec<String>,
+    pub excluded_folders: Vec<String>,
     /// Folder path → executable path (or null when the selection was cleared).
     #[serde(default)]
-    pub(crate) executables: BTreeMap<String, Option<String>>,
+    pub executables: BTreeMap<String, Option<String>>,
     #[serde(default)]
-    pub(crate) known_folders: Vec<String>,
+    pub known_folders: Vec<String>,
     #[serde(default)]
-    pub(crate) automatic_metadata: bool,
+    pub automatic_metadata: bool,
     #[serde(default = "default_true")]
-    pub(crate) include_pinned_and_steam: bool,
+    pub include_pinned_and_steam: bool,
 }
 
 fn default_true() -> bool {
@@ -341,15 +341,15 @@ fn default_true() -> bool {
 }
 
 impl FoldersDto {
-    pub(crate) fn is_assigned(&self, path: &str) -> bool {
+    pub fn is_assigned(&self, path: &str) -> bool {
         self.assigned_folders.iter().any(|folder| folder == path)
     }
 
-    pub(crate) fn is_excluded(&self, path: &str) -> bool {
+    pub fn is_excluded(&self, path: &str) -> bool {
         self.excluded_folders.iter().any(|folder| folder == path)
     }
 
-    pub(crate) fn executable_for(&self, path: &str) -> Option<&str> {
+    pub fn executable_for(&self, path: &str) -> Option<&str> {
         self.executables.get(path).and_then(Option::as_deref)
     }
 }
@@ -359,20 +359,20 @@ impl FoldersDto {
 /// from the launcher path but stay listed so the block can be undone.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct ProgramDto {
-    pub(crate) path: String,
-    pub(crate) name: String,
+pub struct ProgramDto {
+    pub path: String,
+    pub name: String,
     #[serde(default)]
-    pub(crate) pinned: bool,
+    pub pinned: bool,
     #[serde(default)]
-    pub(crate) blocked: bool,
+    pub blocked: bool,
     #[serde(default)]
-    pub(crate) available: bool,
+    pub available: bool,
 }
 
 impl ProgramDto {
     /// The library entry a pinned program gains (`ContainerProgram.entry`).
-    pub(crate) fn entry_id(&self) -> String {
+    pub fn entry_id(&self) -> String {
         format!("pinned:{}", self.path)
     }
 }
@@ -382,27 +382,27 @@ impl ProgramDto {
 /// be pointed at the folder.
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct CandidatesDto {
+pub struct CandidatesDto {
     #[serde(default)]
-    pub(crate) folder: String,
+    pub folder: String,
     #[serde(default)]
-    pub(crate) candidates: Vec<CandidateDto>,
+    pub candidates: Vec<CandidateDto>,
 }
 
 /// One candidate: the absolute path is what `folders.executable` stores.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct CandidateDto {
-    pub(crate) path: String,
+pub struct CandidateDto {
+    pub path: String,
     #[serde(default)]
-    pub(crate) name: String,
+    pub name: String,
 }
 
 impl CandidateDto {
     /// Where the file sits inside the folder, which is what distinguishes two
     /// installs that both ship `game.exe`.
-    #[cfg(test)]
-    pub(crate) fn location(&self, folder: &str) -> String {
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn location(&self, folder: &str) -> String {
         let path = std::path::Path::new(&self.path);
         let base = std::path::Path::new(folder);
         path.strip_prefix(base)
@@ -413,7 +413,7 @@ impl CandidateDto {
 
 /// Human-friendly relative directory label for `.exe` paths in pickers & choosers.
 /// Returns `(label, is_root)` where root files map to `("根目录", true)`.
-pub(crate) fn relative_directory_label(path: &str, folder: &str) -> (String, bool) {
+pub fn relative_directory_label(path: &str, folder: &str) -> (String, bool) {
     let root_label = || crate::i18n::s().bridge.root_folder.to_owned();
     let file_path = std::path::Path::new(path);
     let base_path = std::path::Path::new(folder);
@@ -442,259 +442,259 @@ pub(crate) fn relative_directory_label(path: &str, folder: &str) -> (String, boo
 /// byte count.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct ProcessDto {
-    pub(crate) pid: i64,
-    pub(crate) name: String,
+pub struct ProcessDto {
+    pub pid: i64,
+    pub name: String,
     #[serde(default)]
-    pub(crate) memory: Option<String>,
+    pub memory: Option<String>,
     #[serde(default)]
-    pub(crate) kind: Option<String>,
+    pub kind: Option<String>,
     #[serde(default)]
-    pub(crate) source: Option<String>,
+    pub source: Option<String>,
     /// Unix seconds, matching the bridge's `dateUnit`.
     #[serde(default)]
-    pub(crate) started_at: Option<f64>,
+    pub started_at: Option<f64>,
     #[serde(default)]
-    pub(crate) macos_pid: Option<i64>,
+    pub macos_pid: Option<i64>,
 }
 
 /// `processes.kill` reply. `killed: false` means the snapshot did not contain
 /// the PID and nothing was signalled; it is a reply, not an error.
 #[derive(Debug, Clone, Deserialize)]
-pub(crate) struct KillReplyDto {
+pub struct KillReplyDto {
     #[serde(default)]
-    pub(crate) killed: bool,
+    pub killed: bool,
 }
 
 /// `library.scan` reply: a `BridgeJobStore` handle.
 #[derive(Debug, Clone, Deserialize)]
-pub(crate) struct JobStartDto {
+pub struct JobStartDto {
     #[serde(rename = "jobID")]
-    pub(crate) job_id: String,
+    pub job_id: String,
     #[serde(default)]
-    pub(crate) backend: Option<String>,
+    pub backend: Option<String>,
     /// The backend the launch resolved before availability applied, present
     /// only when it cannot run — `backend` is the fallback it landed on.
     #[serde(default, rename = "backendFrom")]
-    pub(crate) backend_from: Option<String>,
+    pub backend_from: Option<String>,
 }
 
 /// `system.choosePath`: the caller's purpose echoed back plus the selection.
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct PathReplyDto {
+pub struct PathReplyDto {
     #[serde(default)]
-    pub(crate) purpose: String,
+    pub purpose: String,
     #[serde(default)]
-    pub(crate) path: Option<String>,
+    pub path: Option<String>,
 }
 
 /// The completed result of a `bottle.*` lifecycle job. Fields the operation
 /// does not produce are absent.
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct BottleOperationResultDto {
+pub struct BottleOperationResultDto {
     #[serde(default)]
-    pub(crate) path: Option<String>,
+    pub path: Option<String>,
     #[serde(default)]
-    pub(crate) name: Option<String>,
+    pub name: Option<String>,
 }
 
 /// `bottle.diagnostics` job result.
 #[derive(Debug, Clone, Default, Deserialize)]
-pub(crate) struct DiagnosticsReportDto {
+pub struct DiagnosticsReportDto {
     #[serde(default)]
-    pub(crate) report: String,
+    pub report: String,
 }
 
 /// One finding from the Wine audio probe.
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct AudioFindingDto {
+pub struct AudioFindingDto {
     #[serde(default)]
-    pub(crate) description: String,
+    pub description: String,
     #[serde(default)]
-    pub(crate) suggested_action: Option<String>,
+    pub suggested_action: Option<String>,
 }
 
 /// `audio.test` job result: the Wine stack probe plus any findings.
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct AudioResultDto {
+pub struct AudioResultDto {
     #[serde(default)]
-    pub(crate) status: String,
+    pub status: String,
     #[serde(default)]
-    pub(crate) summary: String,
+    pub summary: String,
     #[serde(default)]
-    pub(crate) evidence: Vec<String>,
+    pub evidence: Vec<String>,
     #[serde(default)]
-    pub(crate) findings: Vec<AudioFindingDto>,
+    pub findings: Vec<AudioFindingDto>,
 }
 
 /// One troubleshooting check result from `bottle.checks`.
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct TroubleshootingCheckDto {
+pub struct TroubleshootingCheckDto {
     #[serde(rename = "checkID", default)]
-    pub(crate) check_id: String,
+    pub check_id: String,
     #[serde(default)]
-    pub(crate) outcome: String,
+    pub outcome: String,
     #[serde(default)]
-    pub(crate) summary: String,
+    pub summary: String,
     #[serde(default)]
-    pub(crate) evidence: std::collections::BTreeMap<String, String>,
+    pub evidence: std::collections::BTreeMap<String, String>,
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
-pub(crate) struct ChecksReplyDto {
+pub struct ChecksReplyDto {
     #[serde(default)]
-    pub(crate) checks: Vec<TroubleshootingCheckDto>,
+    pub checks: Vec<TroubleshootingCheckDto>,
 }
 
 /// `setup.status` and the completed `setup.install` job.
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct SetupStatusDto {
+pub struct SetupStatusDto {
     #[serde(default)]
-    pub(crate) installed: bool,
+    pub installed: bool,
     /// Mirrors `installed` on new helpers; `None` on older helpers that
     /// never sent it. External engines may make a runtime usable while
     /// `managedInstalled` stays false.
     #[serde(default)]
-    pub(crate) managed_installed: Option<bool>,
+    pub managed_installed: Option<bool>,
     /// `Some(true)` when any engine — managed or a registered external one —
     /// can run a bottle, so onboarding need not force the managed install.
     #[serde(default)]
-    pub(crate) any_engine_available: Option<bool>,
+    pub any_engine_available: Option<bool>,
     #[serde(default)]
-    pub(crate) version: Option<String>,
+    pub version: Option<String>,
     #[serde(default)]
-    pub(crate) path: String,
+    pub path: String,
     #[serde(default)]
-    pub(crate) rosetta_installed: bool,
+    pub rosetta_installed: bool,
     #[serde(default)]
-    pub(crate) apple_silicon: bool,
+    pub apple_silicon: bool,
 }
 
 /// `setup.gptk.status` and the completed `setup.gptk.import` / `setup.gptk.remove`.
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[allow(dead_code)]
-pub(crate) struct GptkStatusDto {
+pub struct GptkStatusDto {
     #[serde(default)]
-    pub(crate) installed: bool,
+    pub installed: bool,
     #[serde(default)]
-    pub(crate) version: Option<String>,
+    pub version: Option<String>,
     #[serde(default)]
-    pub(crate) deployed: bool,
+    pub deployed: bool,
     #[serde(default)]
-    pub(crate) capable: bool,
+    pub capable: bool,
     #[serde(default)]
-    pub(crate) unverified: bool,
+    pub unverified: bool,
     #[serde(default)]
-    pub(crate) error: Option<String>,
+    pub error: Option<String>,
 }
 
 /// One provider's slice of a `metadata.search` job result. `games` stay as
 /// raw JSON so applying a candidate echoes the provider snapshot verbatim.
 #[derive(Debug, Clone, Default, Deserialize)]
-pub(crate) struct MetadataSearchGroupDto {
+pub struct MetadataSearchGroupDto {
     #[serde(default)]
-    pub(crate) source: String,
+    pub source: String,
     #[serde(default)]
-    pub(crate) error: Option<String>,
+    pub error: Option<String>,
     #[serde(default)]
-    pub(crate) games: Vec<Value>,
+    pub games: Vec<Value>,
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
-pub(crate) struct MetadataSearchReplyDto {
+pub struct MetadataSearchReplyDto {
     #[serde(default)]
-    pub(crate) results: Vec<MetadataSearchGroupDto>,
+    pub results: Vec<MetadataSearchGroupDto>,
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
-pub(crate) struct MetadataSyncReplyDto {
+pub struct MetadataSyncReplyDto {
     #[serde(default)]
-    pub(crate) matched: u64,
+    pub matched: u64,
     #[serde(default)]
-    pub(crate) failed: u64,
+    pub failed: u64,
 }
 
 /// One GameDB recommendation and the diff it would apply.
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct GameDbMatchDto {
+pub struct GameDbMatchDto {
     #[serde(default)]
-    pub(crate) entry: Value,
+    pub entry: Value,
     #[serde(default)]
-    pub(crate) confidence: f64,
+    pub confidence: f64,
     #[serde(default)]
-    pub(crate) explanation: String,
+    pub explanation: String,
     #[serde(default)]
-    pub(crate) variant_id: String,
+    pub variant_id: String,
     #[serde(default)]
-    pub(crate) changes: Vec<ConfigChangeDto>,
+    pub changes: Vec<ConfigChangeDto>,
     #[serde(default)]
-    pub(crate) can_apply: Option<bool>,
+    pub can_apply: Option<bool>,
     #[serde(default)]
-    pub(crate) reference_platform: String,
+    pub reference_platform: String,
     #[serde(default)]
-    pub(crate) availability_reason: String,
+    pub availability_reason: String,
 }
 
 impl GameDbMatchDto {
-    pub(crate) fn apply_available(&self, service_available: bool) -> bool {
+    pub fn apply_available(&self, service_available: bool) -> bool {
         service_available && self.can_apply.unwrap_or(true)
     }
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct ConfigChangeDto {
+pub struct ConfigChangeDto {
     #[serde(default)]
-    pub(crate) category: String,
+    pub category: String,
     #[serde(default)]
-    pub(crate) setting: String,
+    pub setting: String,
     #[serde(default)]
-    pub(crate) current: String,
+    pub current: String,
     #[serde(default)]
-    pub(crate) next: String,
+    pub next: String,
     #[serde(default)]
-    pub(crate) high_impact: bool,
+    pub high_impact: bool,
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct GameConfigMatchReplyDto {
+pub struct GameConfigMatchReplyDto {
     #[serde(default)]
-    pub(crate) matches: Vec<GameDbMatchDto>,
+    pub matches: Vec<GameDbMatchDto>,
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct GameConfigApplyReplyDto {
+pub struct GameConfigApplyReplyDto {
     #[serde(default)]
-    pub(crate) pending_verbs: Vec<String>,
+    pub pending_verbs: Vec<String>,
     #[serde(default)]
-    pub(crate) changes: Vec<ConfigChangeDto>,
+    pub changes: Vec<ConfigChangeDto>,
 }
 
 /// A search hit with its provider snapshot retained for `metadata.apply`.
 /// `thumbnail` is a locally cached cover file the bridge fetched while
 /// searching, if the provider exposed one.
 #[derive(Debug, Clone)]
-pub(crate) struct MetadataCandidate {
-    pub(crate) raw: Value,
-    pub(crate) title: String,
-    pub(crate) developer: String,
-    pub(crate) release_date: String,
-    pub(crate) summary: String,
-    pub(crate) thumbnail: Option<std::path::PathBuf>,
+pub struct MetadataCandidate {
+    pub raw: Value,
+    pub title: String,
+    pub developer: String,
+    pub release_date: String,
+    pub summary: String,
+    pub thumbnail: Option<std::path::PathBuf>,
 }
 
 impl MetadataCandidate {
-    pub(crate) fn from_value(value: Value) -> Option<Self> {
+    pub fn from_value(value: Value) -> Option<Self> {
         let title = value.get("title")?.as_str()?.to_owned();
         Some(Self {
             developer: value
@@ -724,15 +724,15 @@ impl MetadataCandidate {
 
 /// `BridgeFailure` as `jobs.get` encodes it in `error`.
 #[derive(Debug, Clone, Deserialize)]
-pub(crate) struct BridgeFailureDto {
+pub struct BridgeFailureDto {
     #[serde(default)]
-    pub(crate) code: String,
+    pub code: String,
     #[serde(default)]
-    pub(crate) message: String,
+    pub message: String,
 }
 
 impl BridgeFailureDto {
-    pub(crate) fn reason(&self) -> String {
+    pub fn reason(&self) -> String {
         crate::i18n::bridge_errors::describe(&self.code, &self.message)
     }
 }
@@ -742,19 +742,19 @@ impl BridgeFailureDto {
 /// scan); `result` is `{snapshotID, total}` once the scan succeeds.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct JobDto {
+pub struct JobDto {
     #[serde(default)]
-    pub(crate) status: String,
+    pub status: String,
     #[serde(default)]
-    pub(crate) progress: Value,
+    pub progress: Value,
     #[serde(default)]
-    pub(crate) result: Option<Value>,
+    pub result: Option<Value>,
     #[serde(default)]
-    pub(crate) error: Option<BridgeFailureDto>,
+    pub error: Option<BridgeFailureDto>,
 }
 
 impl JobDto {
-    pub(crate) fn stage(&self) -> Option<&str> {
+    pub fn stage(&self) -> Option<&str> {
         self.progress.get("stage").and_then(Value::as_str)
     }
 }
@@ -762,179 +762,179 @@ impl JobDto {
 /// The `library.scan` operation result, carried in `jobs.get`'s `result`.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct ScanResultDto {
+pub struct ScanResultDto {
     #[serde(rename = "snapshotID")]
-    pub(crate) snapshot_id: String,
+    pub snapshot_id: String,
     #[serde(default)]
-    pub(crate) total: u64,
+    pub total: u64,
 }
 
 /// One `library.page` reply (`ApplicationService.pageLibrary`).
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct LibraryPageDto {
+pub struct LibraryPageDto {
     #[serde(default)]
-    pub(crate) entries: Vec<EntryDto>,
+    pub entries: Vec<EntryDto>,
     #[serde(default)]
-    pub(crate) total: u64,
+    pub total: u64,
     /// `null` ends the catalogue; the Rust side keeps it as `Option`.
     #[serde(default)]
-    pub(crate) next_offset: Option<u64>,
+    pub next_offset: Option<u64>,
 }
 
 /// One `library.entries` record (`EntryRecord` in `Workspace.swift`).
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct EntryDto {
-    pub(crate) id: String,
+pub struct EntryDto {
+    pub id: String,
     /// `LibraryEntry.metadataIdentity`: the stable per-bottle key launcher
     /// auto-start and hidden preferences are stored under.
     #[serde(default)]
-    pub(crate) identity: Option<String>,
-    pub(crate) name: String,
+    pub identity: Option<String>,
+    pub name: String,
     /// Bottle path; used to confirm which sidebar slot owns the entry.
     #[serde(default)]
-    pub(crate) container: Option<String>,
+    pub container: Option<String>,
     /// Launching executable for pinned/folder entries. A folder entry carries
     /// its folder, which cannot be run.
     #[serde(default)]
-    pub(crate) executable: Option<String>,
+    pub executable: Option<String>,
     /// Folder directory path when source is "folder".
     #[serde(default)]
-    pub(crate) folder: Option<String>,
+    pub folder: Option<String>,
     /// Installation directory for all sources, especially Steam apps.
     #[serde(default)]
-    pub(crate) game_directory: Option<String>,
+    pub game_directory: Option<String>,
     /// Where the entry came from (`pinned`, `steam`, `folder`).
     #[serde(default)]
-    pub(crate) source: Option<String>,
+    pub source: Option<String>,
     /// A folder entry with no executable chosen yet. Play asks for a file
     /// before it can launch.
     #[serde(default)]
-    pub(crate) needs_executable: bool,
+    pub needs_executable: bool,
     /// Executable to extract an icon from, when the source has no artwork.
     #[serde(default)]
-    pub(crate) icon: Option<String>,
+    pub icon: Option<String>,
     #[serde(default)]
-    pub(crate) hidden: bool,
+    pub hidden: bool,
     /// A storefront client rather than a game; sorted below the games
     /// (`LibraryEntry.isLauncher`, `EntryRecord.isLauncher`).
     #[serde(default)]
-    pub(crate) is_launcher: bool,
+    pub is_launcher: bool,
     #[serde(default)]
-    pub(crate) tags: Vec<String>,
+    pub tags: Vec<String>,
     #[serde(default)]
-    pub(crate) multi_executable: bool,
+    pub multi_executable: bool,
     #[serde(default)]
-    pub(crate) launch_executables: Vec<String>,
+    pub launch_executables: Vec<String>,
     #[serde(default)]
-    pub(crate) last_executable: Option<String>,
+    pub last_executable: Option<String>,
     #[serde(default)]
-    pub(crate) metadata: Option<MetadataDto>,
+    pub metadata: Option<MetadataDto>,
     #[serde(default)]
-    pub(crate) character_images: std::collections::BTreeMap<String, String>,
+    pub character_images: std::collections::BTreeMap<String, String>,
     #[serde(default)]
-    pub(crate) activity: ActivityDto,
+    pub activity: ActivityDto,
     /// Resolved on-disk artwork (custom cover or cached remote cover).
     #[serde(default)]
-    pub(crate) cover: Option<String>,
+    pub cover: Option<String>,
     /// Width / height of the artwork, used to keep wide covers wide.
     #[serde(default)]
-    pub(crate) cover_aspect_ratio: Option<f64>,
+    pub cover_aspect_ratio: Option<f64>,
 }
 
-pub(crate) type EntryList = Vec<EntryDto>;
+pub type EntryList = Vec<EntryDto>;
 
 /// `launchers.read` / `launchers.setAutoStart` payload.
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct LaunchersDto {
+pub struct LaunchersDto {
     /// `metadataIdentity` values Whisky launches automatically on startup.
     #[serde(default)]
-    pub(crate) auto_start: Vec<String>,
+    pub auto_start: Vec<String>,
 }
 
 /// The subset of `GameMetadata` the library surfaces read.
 #[derive(Debug, Clone, Default, serde::Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct MetadataDto {
+pub struct MetadataDto {
     #[serde(default)]
-    pub(crate) title: Option<String>,
+    pub title: Option<String>,
     #[serde(default)]
-    pub(crate) summary: Option<String>,
+    pub summary: Option<String>,
     #[serde(default)]
-    pub(crate) developer: Option<String>,
+    pub developer: Option<String>,
     /// `YYYY-MM-DD`; the Swift type keeps it as a string.
     #[serde(default)]
-    pub(crate) release_date: Option<String>,
+    pub release_date: Option<String>,
     #[serde(default)]
-    pub(crate) characters: Option<Vec<CharacterDto>>,
+    pub characters: Option<Vec<CharacterDto>>,
     #[serde(default)]
-    pub(crate) provenance: std::collections::BTreeMap<String, MetadataProvenanceDto>,
+    pub provenance: std::collections::BTreeMap<String, MetadataProvenanceDto>,
     #[serde(flatten)]
-    pub(crate) extra: std::collections::BTreeMap<String, serde_json::Value>,
+    pub extra: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Default, serde::Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct CharacterDto {
+pub struct CharacterDto {
     #[serde(default)]
-    pub(crate) id: String,
+    pub id: String,
     #[serde(default)]
-    pub(crate) name: String,
-    pub(crate) original_name: Option<String>,
+    pub name: String,
+    pub original_name: Option<String>,
     #[serde(rename = "imageURL")]
-    pub(crate) image_url: Option<String>,
-    pub(crate) voice_actor: Option<String>,
-    pub(crate) summary: Option<String>,
-    pub(crate) role: Option<String>,
+    pub image_url: Option<String>,
+    pub voice_actor: Option<String>,
+    pub summary: Option<String>,
+    pub role: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, serde::Serialize, Deserialize)]
-pub(crate) struct MetadataProvenanceDto {
-    pub(crate) source: Option<String>,
+pub struct MetadataProvenanceDto {
+    pub source: Option<String>,
     #[serde(default)]
-    pub(crate) manual: bool,
+    pub manual: bool,
 }
 
 /// `GameActivity`; dates arrive as Unix seconds (`dateEncodingStrategy`).
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct ActivityDto {
+pub struct ActivityDto {
     #[serde(default)]
-    pub(crate) play_time: Option<f64>,
+    pub play_time: Option<f64>,
     #[serde(default)]
-    pub(crate) daily_play_time: std::collections::BTreeMap<String, f64>,
+    pub daily_play_time: std::collections::BTreeMap<String, f64>,
     #[serde(default)]
-    pub(crate) rating: Option<i64>,
+    pub rating: Option<i64>,
     #[serde(default)]
-    pub(crate) last_played: Option<f64>,
+    pub last_played: Option<f64>,
     /// Confirmed session completion; the Swift library sorts `recent` by it.
     #[serde(default)]
-    pub(crate) last_session_ended_at: Option<f64>,
+    pub last_session_ended_at: Option<f64>,
 }
 
 impl ActivityDto {
     /// One-based rating (`nil` when unrated), clamped to what the grid supports.
-    pub(crate) fn rating(&self) -> Option<u8> {
+    pub fn rating(&self) -> Option<u8> {
         self.rating
             .and_then(|rating| u8::try_from(rating).ok())
             .filter(|rating| *rating <= 10)
     }
 
-    pub(crate) fn play_time(&self) -> Option<u64> {
+    pub fn play_time(&self) -> Option<u64> {
         self.play_time
             .filter(|seconds| seconds.is_finite() && *seconds > 0.0)
             .map(|seconds| seconds.round() as u64)
     }
 
-    pub(crate) fn last_played(&self) -> Option<u64> {
+    pub fn last_played(&self) -> Option<u64> {
         self.last_played
             .filter(|seconds| seconds.is_finite() && *seconds > 0.0)
             .map(|seconds| seconds as u64)
     }
 
-    pub(crate) fn last_session_ended_at(&self) -> Option<u64> {
+    pub fn last_session_ended_at(&self) -> Option<u64> {
         self.last_session_ended_at
             .filter(|seconds| seconds.is_finite() && *seconds > 0.0)
             .map(|seconds| seconds as u64)
@@ -944,7 +944,7 @@ impl ActivityDto {
 impl EntryDto {
     /// The first candidate that exists on disk. Absence is normal: covers are
     /// optional, so the view keeps its placeholder treatment.
-    pub(crate) fn artwork_path(&self) -> Option<PathBuf> {
+    pub fn artwork_path(&self) -> Option<PathBuf> {
         [self.cover.as_deref(), self.icon.as_deref()]
             .into_iter()
             .flatten()
@@ -952,7 +952,7 @@ impl EntryDto {
     }
 
     /// A linked metadata title wins over the folder-derived name.
-    pub(crate) fn title(&self) -> &str {
+    pub fn title(&self) -> &str {
         self.metadata
             .as_ref()
             .and_then(|metadata| metadata.title.as_deref())
@@ -963,7 +963,7 @@ impl EntryDto {
 
     /// Map a wire entry onto the view model. `bottle` is the one-based sidebar
     /// slot that owns this entry.
-    pub(crate) fn into_game(self, bottle: usize) -> Game {
+    pub fn into_game(self, bottle: usize) -> Game {
         let art = self.artwork_path();
         let title = {
             let title = self.title().to_owned();
@@ -1030,7 +1030,7 @@ fn non_empty(value: Option<String>) -> Option<String> {
 }
 
 /// Expand a leading `~` using `$HOME`; absolute paths pass through unchanged.
-pub(crate) fn expand_path(raw: &str) -> PathBuf {
+pub fn expand_path(raw: &str) -> PathBuf {
     expand_with_home(
         raw,
         std::env::var_os("HOME").map(PathBuf::from).as_deref(),
@@ -1050,7 +1050,7 @@ fn expand_with_home(raw: &str, home: Option<&Path>) -> PathBuf {
 }
 
 /// Expanded path only when it names a regular file; never creates or probes.
-pub(crate) fn existing_file(raw: &str) -> Option<PathBuf> {
+pub fn existing_file(raw: &str) -> Option<PathBuf> {
     let path = expand_path(raw);
     path.is_file().then_some(path)
 }
@@ -1500,7 +1500,7 @@ mod tests {
 
     #[test]
     fn existing_artwork_file_is_returned_unchanged() {
-        let artwork = format!("{}/assets/astral.png", env!("CARGO_MANIFEST_DIR"));
+        let artwork = format!("{}/../../apps/whisky-gpui/assets/astral.png", env!("CARGO_MANIFEST_DIR"));
         assert_eq!(
             entry_with_cover(&artwork).artwork_path(),
             Some(PathBuf::from(&artwork))
@@ -1932,18 +1932,18 @@ mod game_reference_tests {
 /// the persisted fingerprint approvals into the static status.
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct WineEngineFeatureDto {
+pub struct WineEngineFeatureDto {
     #[serde(default)]
-    pub(crate) id: String,
+    pub id: String,
     /// "supported" | "unverified" | "unavailable".
     #[serde(default)]
-    pub(crate) state: String,
+    pub state: String,
     #[serde(default)]
-    pub(crate) reason: Option<String>,
+    pub reason: Option<String>,
     #[serde(default)]
-    pub(crate) can_override: bool,
+    pub can_override: bool,
     #[serde(default)]
-    pub(crate) enabled: bool,
+    pub enabled: bool,
 }
 
 /// One engine record from `wine.engines.list` / `*.register` / `*.selection`.
@@ -1951,37 +1951,37 @@ pub(crate) struct WineEngineFeatureDto {
 /// and the UI can fall back to "managed only".
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct WineEngineDto {
+pub struct WineEngineDto {
     #[serde(default)]
-    pub(crate) id: String,
+    pub id: String,
     #[serde(default)]
-    pub(crate) name: String,
+    pub name: String,
     #[serde(default)]
-    pub(crate) path: String,
+    pub path: String,
     #[serde(default)]
-    pub(crate) managed: bool,
+    pub managed: bool,
     #[serde(default)]
-    pub(crate) available: bool,
+    pub available: bool,
     #[serde(default)]
-    pub(crate) error: Option<String>,
+    pub error: Option<String>,
     #[serde(default)]
-    pub(crate) architectures: Vec<String>,
+    pub architectures: Vec<String>,
     #[serde(default)]
-    pub(crate) fingerprint: Option<String>,
+    pub fingerprint: Option<String>,
     #[serde(default)]
-    pub(crate) version: Option<String>,
+    pub version: Option<String>,
     #[serde(default)]
-    pub(crate) features: Vec<WineEngineFeatureDto>,
+    pub features: Vec<WineEngineFeatureDto>,
 }
 
 /// `wine.engines.list` reply.
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct WineEngineListDto {
+pub struct WineEngineListDto {
     #[serde(default)]
-    pub(crate) engines: Vec<WineEngineDto>,
+    pub engines: Vec<WineEngineDto>,
     #[serde(default)]
-    pub(crate) load_error: Option<String>,
+    pub load_error: Option<String>,
 }
 
 /// One field or one choice inside `fieldPolicy`: whether the engine blocks
@@ -1989,37 +1989,37 @@ pub(crate) struct WineEngineListDto {
 /// explicit confirmation can still enable it.
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct EnginePolicyDto {
+pub struct EnginePolicyDto {
     #[serde(default)]
-    pub(crate) disabled: bool,
+    pub disabled: bool,
     #[serde(default)]
-    pub(crate) reason: Option<String>,
+    pub reason: Option<String>,
     #[serde(default)]
-    pub(crate) state: String,
+    pub state: String,
     #[serde(default)]
-    pub(crate) can_override: bool,
+    pub can_override: bool,
     /// The `wine.engines.setFeatureOverride` feature this entry confirms.
     #[serde(default)]
-    pub(crate) feature: Option<String>,
+    pub feature: Option<String>,
 }
 
 /// Field-level policy may also carry per-choice entries.
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct EngineFieldPolicyDto {
+pub struct EngineFieldPolicyDto {
     #[serde(default)]
-    pub(crate) disabled: bool,
+    pub disabled: bool,
     #[serde(default)]
-    pub(crate) reason: Option<String>,
+    pub reason: Option<String>,
     #[serde(default)]
-    pub(crate) state: String,
+    pub state: String,
     #[serde(default)]
-    pub(crate) can_override: bool,
+    pub can_override: bool,
     /// The `wine.engines.setFeatureOverride` feature this field confirms.
     #[serde(default)]
-    pub(crate) feature: Option<String>,
+    pub feature: Option<String>,
     #[serde(default)]
-    pub(crate) choices: BTreeMap<String, EnginePolicyDto>,
+    pub choices: BTreeMap<String, EnginePolicyDto>,
 }
 
 /// `wine.engines.selection` / `*.select` / `*.setFeatureOverride` reply:
@@ -2027,16 +2027,16 @@ pub(crate) struct EngineFieldPolicyDto {
 /// confirmations, effective per-feature state and the schema-field policy.
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct WineEngineSelectionDto {
+pub struct WineEngineSelectionDto {
     // The wire key is `engineID` — all-caps acronym, not camelCase `engineId`.
     #[serde(default, rename = "engineID")]
-    pub(crate) engine_id: String,
+    pub engine_id: String,
     #[serde(default)]
-    pub(crate) engine: WineEngineDto,
+    pub engine: WineEngineDto,
     #[serde(default)]
-    pub(crate) feature_overrides: BTreeMap<String, String>,
+    pub feature_overrides: BTreeMap<String, String>,
     #[serde(default)]
-    pub(crate) features: Vec<WineEngineFeatureDto>,
+    pub features: Vec<WineEngineFeatureDto>,
     #[serde(default)]
-    pub(crate) field_policy: BTreeMap<String, EngineFieldPolicyDto>,
+    pub field_policy: BTreeMap<String, EngineFieldPolicyDto>,
 }

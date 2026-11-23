@@ -1,12 +1,12 @@
 //! Desktop conventions shared by the root view and menus.
 
 #[cfg(target_os = "macos")]
-pub(crate) fn ui_font() -> &'static str {
+pub fn ui_font() -> &'static str {
     ".AppleSystemUIFont"
 }
 
 #[cfg(not(target_os = "macos"))]
-pub(crate) fn ui_font() -> &'static str {
+pub fn ui_font() -> &'static str {
     match crate::i18n::locale() {
         crate::i18n::Locale::Ja => "Noto Sans CJK JP",
         crate::i18n::Locale::Ko => "Noto Sans CJK KR",
@@ -21,7 +21,7 @@ pub(crate) fn ui_font() -> &'static str {
 }
 
 #[cfg(target_os = "macos")]
-pub(crate) const SHORTCUTS: [&str; 9] = [
+pub const SHORTCUTS: [&str; 9] = [
     "cmd-q",
     "cmd-r",
     "cmd-shift-m",
@@ -33,7 +33,7 @@ pub(crate) const SHORTCUTS: [&str; 9] = [
     "cmd-[",
 ];
 #[cfg(not(target_os = "macos"))]
-pub(crate) const SHORTCUTS: [&str; 9] = [
+pub const SHORTCUTS: [&str; 9] = [
     "ctrl-q",
     "ctrl-r",
     "ctrl-shift-m",
@@ -45,7 +45,7 @@ pub(crate) const SHORTCUTS: [&str; 9] = [
     "alt-left",
 ];
 
-pub(crate) fn settings_tip() -> &'static str {
+pub fn settings_tip() -> &'static str {
     let p = &crate::i18n::s().platform;
     if cfg!(target_os = "macos") {
         p.settings_tip_mac
@@ -55,12 +55,12 @@ pub(crate) fn settings_tip() -> &'static str {
 }
 
 #[cfg(target_os = "macos")]
-pub(crate) const BACK_SHORTCUT_LABEL: &str = "⌘[";
+pub const BACK_SHORTCUT_LABEL: &str = "⌘[";
 #[cfg(not(target_os = "macos"))]
-pub(crate) const BACK_SHORTCUT_LABEL: &str = "Alt+←";
+pub const BACK_SHORTCUT_LABEL: &str = "Alt+←";
 
 #[allow(dead_code)]
-pub(crate) fn motion_menu() -> &'static str {
+pub fn motion_menu() -> &'static str {
     let p = &crate::i18n::s().platform;
     if cfg!(target_os = "macos") {
         p.motion_menu_mac
@@ -69,7 +69,7 @@ pub(crate) fn motion_menu() -> &'static str {
     }
 }
 
-pub(crate) fn reveal_label() -> &'static str {
+pub fn reveal_label() -> &'static str {
     let p = &crate::i18n::s().platform;
     if cfg!(target_os = "macos") {
         p.reveal_mac
@@ -88,7 +88,7 @@ const TRAFFIC_LIGHT_CLEARANCE: f32 = 80.;
 /// Fullscreen windows hide the lights, and other platforms draw their window
 /// controls in a separate title bar — both keep the regular `base` padding.
 #[cfg(target_os = "macos")]
-pub(crate) fn traffic_light_padding(sidebar_width: f32, base: f32, fullscreen: bool) -> f32 {
+pub fn traffic_light_padding(sidebar_width: f32, base: f32, fullscreen: bool) -> f32 {
     if fullscreen {
         base
     } else {
@@ -97,12 +97,12 @@ pub(crate) fn traffic_light_padding(sidebar_width: f32, base: f32, fullscreen: b
 }
 
 #[cfg(not(target_os = "macos"))]
-pub(crate) fn traffic_light_padding(_sidebar_width: f32, base: f32, _fullscreen: bool) -> f32 {
+pub fn traffic_light_padding(_sidebar_width: f32, base: f32, _fullscreen: bool) -> f32 {
     base
 }
 
 /// Desktop entries need the persistent AppImage path across mount generations.
-pub(crate) fn desktop_launcher() -> std::io::Result<std::path::PathBuf> {
+pub fn desktop_launcher() -> std::io::Result<std::path::PathBuf> {
     let current = std::env::current_exe()?;
     #[cfg(target_os = "linux")]
     if let (Some(image), Some(directory)) =

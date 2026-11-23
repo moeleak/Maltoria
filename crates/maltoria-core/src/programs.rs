@@ -12,12 +12,12 @@ use crate::bridge::dto::ProgramDto;
 use crate::runtime::PendingEdits;
 
 /// Empty-state copy for the Programs page.
-pub(crate) fn empty_programs() -> &'static str {
+pub fn empty_programs() -> &'static str {
     crate::i18n::s().bottle.empty_programs
 }
 
 #[derive(Debug, Default)]
-pub(crate) struct ProgramTable {
+pub struct ProgramTable {
     rows: BTreeMap<String, ProgramDto>,
     /// Last committed `pinned` flag per path, for rollback on a rejection.
     pins: PendingEdits<bool>,
@@ -29,7 +29,7 @@ impl ProgramTable {
     /// Replace the list with an authoritative reply. A row whose pin or block
     /// edit is still in flight keeps its optimistic flag: the reply may have
     /// raced a second click and must not flash the old value back.
-    pub(crate) fn apply(&mut self, programs: Vec<ProgramDto>) {
+    pub fn apply(&mut self, programs: Vec<ProgramDto>) {
         let previous = std::mem::take(&mut self.rows);
         for mut program in programs {
             let path = program.path.clone();
@@ -43,17 +43,17 @@ impl ProgramTable {
         }
     }
 
-    pub(crate) fn is_empty(&self) -> bool {
+    pub fn is_empty(&self) -> bool {
         self.rows.is_empty()
     }
 
-    pub(crate) fn row(&self, path: &str) -> Option<&ProgramDto> {
+    pub fn row(&self, path: &str) -> Option<&ProgramDto> {
         self.rows.get(path)
     }
 
     /// Pinned programs first, then by name — the SwiftUI program browser's
     /// order.
-    pub(crate) fn ordered(&self) -> Vec<&ProgramDto> {
+    pub fn ordered(&self) -> Vec<&ProgramDto> {
         let mut rows: Vec<&ProgramDto> = self.rows.values().collect();
         rows.sort_by(|left, right| {
             right
@@ -65,7 +65,7 @@ impl ProgramTable {
     }
 
     /// Flip `pinned` optimistically. Returns `false` when the path is unknown.
-    pub(crate) fn set_pinned(&mut self, path: &str, pinned: bool) -> bool {
+    pub fn set_pinned(&mut self, path: &str, pinned: bool) -> bool {
         let Some(row) = self.rows.get_mut(path) else {
             return false;
         };
@@ -75,7 +75,7 @@ impl ProgramTable {
     }
 
     /// Flip `blocked` optimistically. Returns `false` when the path is unknown.
-    pub(crate) fn set_blocked(&mut self, path: &str, blocked: bool) -> bool {
+    pub fn set_blocked(&mut self, path: &str, blocked: bool) -> bool {
         let Some(row) = self.rows.get_mut(path) else {
             return false;
         };
@@ -85,17 +85,17 @@ impl ProgramTable {
     }
 
     /// The helper accepted the write; its reply is now authoritative.
-    pub(crate) fn commit_pin(&mut self, path: &str) {
+    pub fn commit_pin(&mut self, path: &str) {
         self.pins.succeed(path);
     }
 
-    pub(crate) fn commit_block(&mut self, path: &str) {
+    pub fn commit_block(&mut self, path: &str) {
         self.blocks.succeed(path);
     }
 
     /// Restore the last committed `pinned` flag; `true` when there was
     /// something to roll back.
-    pub(crate) fn rollback_pin(&mut self, path: &str) -> bool {
+    pub fn rollback_pin(&mut self, path: &str) -> bool {
         let Some(previous) = self.pins.fail(path) else {
             return false;
         };
@@ -105,7 +105,7 @@ impl ProgramTable {
         true
     }
 
-    pub(crate) fn rollback_block(&mut self, path: &str) -> bool {
+    pub fn rollback_block(&mut self, path: &str) -> bool {
         let Some(previous) = self.blocks.fail(path) else {
             return false;
         };

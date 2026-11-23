@@ -14,7 +14,7 @@ use serde_json::{Value, json};
 use crate::bridge::dto::{EntryDto, LibraryPageDto};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum JobStatus {
+pub enum JobStatus {
     Queued,
     Running,
     Cancelling,
@@ -24,7 +24,7 @@ pub(crate) enum JobStatus {
 }
 
 impl JobStatus {
-    pub(crate) fn from_wire(raw: &str) -> Option<Self> {
+    pub fn from_wire(raw: &str) -> Option<Self> {
         match raw {
             "queued" => Some(Self::Queued),
             "running" => Some(Self::Running),
@@ -36,12 +36,12 @@ impl JobStatus {
         }
     }
 
-    pub(crate) fn is_terminal(self) -> bool {
+    pub fn is_terminal(self) -> bool {
         matches!(self, Self::Completed | Self::Failed | Self::Cancelled)
     }
 
     /// Sheet copy for the status, paired with the job's stage.
-    pub(crate) fn label(self) -> &'static str {
+    pub fn label(self) -> &'static str {
         match self {
             Self::Queued => crate::i18n::s().winetricks.queued,
             Self::Running => crate::i18n::s().scan.scanning,
@@ -55,7 +55,7 @@ impl JobStatus {
 
 /// Progress line for the sheet. `scanning` comes from the helper; `paging` is
 /// this frontend's own phase while it walks `library.page`.
-pub(crate) fn progress_label(status: JobStatus, stage: Option<&str>) -> &'static str {
+pub fn progress_label(status: JobStatus, stage: Option<&str>) -> &'static str {
     match (status, stage) {
         (JobStatus::Queued, _) => crate::i18n::s().winetricks.queued,
         (JobStatus::Running, Some("paging")) => crate::i18n::s().scan.loading_entries,
@@ -69,7 +69,7 @@ pub(crate) fn progress_label(status: JobStatus, stage: Option<&str>) -> &'static
 
 /// `library.page` request. `snapshotID` identifies the scan result; `offset`
 /// and `limit` must stay within 0…total and 1…100.
-pub(crate) fn page_payload(snapshot_id: &str, offset: u64, limit: u64) -> Value {
+pub fn page_payload(snapshot_id: &str, offset: u64, limit: u64) -> Value {
     json!({
         "snapshotID": snapshot_id,
         "offset": offset,
@@ -81,15 +81,15 @@ pub(crate) fn page_payload(snapshot_id: &str, offset: u64, limit: u64) -> Value 
 /// that does not advance, or whose length disagrees with the offset it claims,
 /// is an error rather than a silently truncated catalogue.
 #[derive(Debug)]
-pub(crate) struct PageAccumulator {
-    pub(crate) total: u64,
-    pub(crate) offset: u64,
+pub struct PageAccumulator {
+    pub total: u64,
+    pub offset: u64,
     entries: Vec<EntryDto>,
     finished: bool,
 }
 
 impl PageAccumulator {
-    pub(crate) fn start(total: u64) -> Self {
+    pub fn start(total: u64) -> Self {
         Self {
             total,
             offset: 0,
@@ -98,18 +98,18 @@ impl PageAccumulator {
         }
     }
 
-    pub(crate) fn loaded(&self) -> usize {
+    pub fn loaded(&self) -> usize {
         self.entries.len()
     }
 
-    #[cfg(test)]
-    pub(crate) fn finished(&self) -> bool {
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn finished(&self) -> bool {
         self.finished
     }
 
     /// Apply one page. Returns the next offset to request, or `None` when the
     /// reply ended the catalogue (`nextOffset == null`).
-    pub(crate) fn apply(&mut self, page: &LibraryPageDto) -> Result<Option<u64>, String> {
+    pub fn apply(&mut self, page: &LibraryPageDto) -> Result<Option<u64>, String> {
         if self.finished {
             return Err("a page arrived after the catalogue ended".to_owned());
         }
@@ -152,7 +152,7 @@ impl PageAccumulator {
     }
 
     /// The merged catalogue, in the order the helper returned it.
-    pub(crate) fn into_entries(self) -> Vec<EntryDto> {
+    pub fn into_entries(self) -> Vec<EntryDto> {
         self.entries
     }
 }

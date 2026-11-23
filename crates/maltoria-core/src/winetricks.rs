@@ -14,13 +14,13 @@ use crate::scan::JobStatus;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct CatalogDto {
+pub struct CatalogDto {
     #[serde(default)]
-    pub(crate) categories: Vec<CategoryDto>,
+    pub categories: Vec<CategoryDto>,
 }
 
 impl CatalogDto {
-    pub(crate) fn verb_count(&self) -> usize {
+    pub fn verb_count(&self) -> usize {
         self.categories
             .iter()
             .map(|category| category.verbs.len())
@@ -30,44 +30,44 @@ impl CatalogDto {
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct CategoryDto {
-    pub(crate) id: String,
+pub struct CategoryDto {
+    pub id: String,
     #[serde(default)]
-    pub(crate) verbs: Vec<VerbDto>,
+    pub verbs: Vec<VerbDto>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct VerbDto {
-    pub(crate) name: String,
+pub struct VerbDto {
+    pub name: String,
     #[serde(default)]
-    pub(crate) description: String,
+    pub description: String,
 }
 
 /// `winetricks.installed` reply. `fromCache` only describes how the helper
 /// learned the set; both sources are authoritative for the UI.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct InstalledDto {
+pub struct InstalledDto {
     #[serde(default)]
-    pub(crate) verbs: Vec<String>,
+    pub verbs: Vec<String>,
     #[serde(default)]
-    pub(crate) from_cache: bool,
+    pub from_cache: bool,
 }
 
 /// The subset of job progress this sheet renders.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub(crate) struct InstallProgress {
-    pub(crate) stage: Option<String>,
-    pub(crate) verb: Option<String>,
-    pub(crate) index: Option<u64>,
-    pub(crate) total: Option<u64>,
-    pub(crate) line: Option<String>,
-    pub(crate) exit_code: Option<i32>,
+pub struct InstallProgress {
+    pub stage: Option<String>,
+    pub verb: Option<String>,
+    pub index: Option<u64>,
+    pub total: Option<u64>,
+    pub line: Option<String>,
+    pub exit_code: Option<i32>,
 }
 
 impl InstallProgress {
-    pub(crate) fn from_value(value: &Value) -> Self {
+    pub fn from_value(value: &Value) -> Self {
         Self {
             stage: value
                 .get("stage")
@@ -84,7 +84,7 @@ impl InstallProgress {
         }
     }
 
-    pub(crate) fn count_label(&self) -> Option<String> {
+    pub fn count_label(&self) -> Option<String> {
         Some(format!("{} / {}", self.index?, self.total?))
     }
 }
@@ -93,26 +93,26 @@ impl InstallProgress {
 /// `succeeded` and `failed` describe only this request.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct InstallResultDto {
+pub struct InstallResultDto {
     #[serde(default)]
-    pub(crate) installed: Vec<String>,
+    pub installed: Vec<String>,
     #[serde(default)]
-    pub(crate) succeeded: Vec<String>,
+    pub succeeded: Vec<String>,
     #[serde(default)]
-    pub(crate) failed: Vec<FailureDto>,
+    pub failed: Vec<FailureDto>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct FailureDto {
+pub struct FailureDto {
     #[serde(default)]
-    pub(crate) verb: String,
+    pub verb: String,
     #[serde(default)]
-    pub(crate) reason: String,
+    pub reason: String,
 }
 
 impl FailureDto {
-    pub(crate) fn label(&self) -> String {
+    pub fn label(&self) -> String {
         if self.reason.is_empty() {
             self.verb.clone()
         } else {
@@ -123,19 +123,19 @@ impl FailureDto {
 
 /// One `winetricks.install` job as the sheet tracks it.
 #[derive(Debug, Clone)]
-pub(crate) struct InstallJob {
-    pub(crate) container: String,
-    pub(crate) job_id: Option<String>,
-    pub(crate) status: Option<JobStatus>,
-    pub(crate) progress: InstallProgress,
-    pub(crate) finished: bool,
-    pub(crate) error: Option<String>,
-    pub(crate) succeeded: Vec<String>,
-    pub(crate) failed: Vec<FailureDto>,
+pub struct InstallJob {
+    pub container: String,
+    pub job_id: Option<String>,
+    pub status: Option<JobStatus>,
+    pub progress: InstallProgress,
+    pub finished: bool,
+    pub error: Option<String>,
+    pub succeeded: Vec<String>,
+    pub failed: Vec<FailureDto>,
 }
 
 impl InstallJob {
-    pub(crate) fn new(container: &str) -> Self {
+    pub fn new(container: &str) -> Self {
         Self {
             container: container.to_owned(),
             job_id: None,
@@ -148,18 +148,18 @@ impl InstallJob {
         }
     }
 
-    pub(crate) fn running(&self) -> bool {
+    pub fn running(&self) -> bool {
         !self.finished && !self.status.is_some_and(|status| status.is_terminal())
     }
 
-    pub(crate) fn label(&self) -> String {
+    pub fn label(&self) -> String {
         install_label(self)
     }
 }
 
 /// Supervised updates for one install job.
 #[derive(Debug)]
-pub(crate) enum InstallUpdate {
+pub enum InstallUpdate {
     Started {
         job_id: String,
     },
@@ -180,21 +180,21 @@ pub(crate) enum InstallUpdate {
 
 /// Catalog and per-bottle state the sheet shares with the bridge worker.
 #[derive(Default)]
-pub(crate) struct WinetricksState {
-    pub(crate) catalog: Option<CatalogDto>,
-    pub(crate) catalog_pending: bool,
-    pub(crate) catalog_error: Option<String>,
+pub struct WinetricksState {
+    pub catalog: Option<CatalogDto>,
+    pub catalog_pending: bool,
+    pub catalog_error: Option<String>,
     /// Installed verbs keyed by container path.
-    pub(crate) installed: BTreeMap<String, BTreeSet<String>>,
-    pub(crate) installed_pending: BTreeSet<String>,
-    pub(crate) installed_error: BTreeMap<String, String>,
-    pub(crate) category: Option<String>,
-    pub(crate) selected: Option<String>,
-    pub(crate) job: Option<InstallJob>,
+    pub installed: BTreeMap<String, BTreeSet<String>>,
+    pub installed_pending: BTreeSet<String>,
+    pub installed_error: BTreeMap<String, String>,
+    pub category: Option<String>,
+    pub selected: Option<String>,
+    pub job: Option<InstallJob>,
 }
 
 impl WinetricksState {
-    pub(crate) fn ensure_category(&mut self) {
+    pub fn ensure_category(&mut self) {
         let Some(catalog) = &self.catalog else { return };
         if self.category.as_ref().is_some_and(|active| {
             catalog
@@ -210,11 +210,11 @@ impl WinetricksState {
             .map(|category| category.id.clone());
     }
 
-    pub(crate) fn installed_for(&self, container: &str) -> Option<&BTreeSet<String>> {
+    pub fn installed_for(&self, container: &str) -> Option<&BTreeSet<String>> {
         self.installed.get(container)
     }
 
-    pub(crate) fn set_installed(&mut self, container: &str, verbs: Vec<String>) {
+    pub fn set_installed(&mut self, container: &str, verbs: Vec<String>) {
         self.installed
             .insert(container.to_owned(), verbs.into_iter().collect());
         self.installed_error.remove(container);
@@ -222,7 +222,7 @@ impl WinetricksState {
     }
 }
 
-pub(crate) fn category_label(id: &str) -> &str {
+pub fn category_label(id: &str) -> &str {
     let w = &crate::i18n::s().winetricks;
     match id {
         "apps" => w.cat_apps,
@@ -237,7 +237,7 @@ pub(crate) fn category_label(id: &str) -> &str {
 
 /// Case-insensitive name/description search, optionally narrowed to installed
 /// verbs. The helper's category order and verb order are preserved.
-pub(crate) fn filtered_verbs<'a>(
+pub fn filtered_verbs<'a>(
     category: &'a CategoryDto,
     query: &str,
     installed_only: bool,
@@ -256,7 +256,7 @@ pub(crate) fn filtered_verbs<'a>(
         .collect()
 }
 
-pub(crate) fn install_label(job: &InstallJob) -> String {
+pub fn install_label(job: &InstallJob) -> String {
     let status = job.status.unwrap_or(JobStatus::Queued);
     let verb = job.progress.verb.as_deref().unwrap_or("");
     let w = &crate::i18n::s().winetricks;

@@ -1,5 +1,19 @@
 # Maltoria
 
+## Core (`crates/maltoria-core`)
+
+```bash
+cargo test --locked --manifest-path crates/maltoria-core/Cargo.toml
+```
+
+The GUI-independent half of the apps: the helper bridge and its supervisor,
+the library model, runtime, configuration and program settings state, and the
+localized strings. `build.rs` compiles `locales/*.toml` into the i18n string
+tables. Helpers the apps' tests need (`BridgeSupervisor::recording_for_tests`,
+`LocaleGuard`, …) are behind the `test-support` feature, which the apps enable
+for their dev-dependencies; gate such items with
+`#[cfg(any(test, feature = "test-support"))]`.
+
 ## GPUI app (`apps/whisky-gpui`)
 
 ```bash
@@ -7,8 +21,8 @@ cargo check --locked --manifest-path apps/whisky-gpui/Cargo.toml
 cargo test --locked --manifest-path apps/whisky-gpui/Cargo.toml
 ```
 
-Standalone Cargo package (own `Cargo.lock`, exact `=` pinned deps). `build.rs`
-compiles `locales/*.toml` into the i18n string tables.
+Standalone Cargo package (own `Cargo.lock`, exact `=` pinned deps). It uses the
+core's modules under their old paths (`crate::bridge`, `crate::i18n`, …).
 
 ## i18n
 
@@ -19,9 +33,9 @@ python3 scripts/i18n.py find <text>  # locate a UI string by content
 python3 -m unittest discover -s scripts -p 'test_i18n.py' -v
 ```
 
-Translations live in `apps/whisky-gpui/locales/{en,zh-Hans,ja,ko,fr,es,it,de,ru}.toml`;
+Translations live in `crates/maltoria-core/locales/{en,zh-Hans,ja,ko,fr,es,it,de,ru}.toml`;
 `en` is the reference locale every other file must match. Exceptions go in
-`apps/whisky-gpui/locales/i18n-allowlist.toml` with a reason. See the
+`crates/maltoria-core/locales/i18n-allowlist.toml` with a reason. See the
 Localization section of `CONTRIBUTING.md`.
 
 ### Working with i18n — rules

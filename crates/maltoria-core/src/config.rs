@@ -16,22 +16,22 @@ use std::collections::BTreeMap;
 use serde_json::{Value, json};
 
 /// `library.page` accepts 1…100; 100 keeps the round-trip count low.
-pub(crate) const PAGE_LIMIT: u64 = 100;
+pub const PAGE_LIMIT: u64 = 100;
 /// `ApplicationService.scanLibrary` refuses catalogues above this size.
-pub(crate) const MAX_ENTRIES: usize = 50_000;
+pub const MAX_ENTRIES: usize = 50_000;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) struct ConfigOption {
-    pub(crate) id: String,
-    pub(crate) title: String,
+pub struct ConfigOption {
+    pub id: String,
+    pub title: String,
 }
 
 impl ConfigOption {
-    pub(crate) fn display_title(&self, field_id: &str) -> &str {
+    pub fn display_title(&self, field_id: &str) -> &str {
         crate::i18n::config::option_title(field_id, &self.id, &self.title)
     }
 
-    pub(crate) fn title_for(options: &[ConfigOption], id: &str) -> String {
+    pub fn title_for(options: &[ConfigOption], id: &str) -> String {
         options
             .iter()
             .find(|option| option.id == id)
@@ -39,7 +39,7 @@ impl ConfigOption {
             .unwrap_or_else(|| id.to_owned())
     }
 
-    pub(crate) fn localized_title_for(
+    pub fn localized_title_for(
         field_id: &str,
         options: &[ConfigOption],
         id: &str,
@@ -54,7 +54,7 @@ impl ConfigOption {
 
 /// The four kinds `ConfigurationField.Input` can carry.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) enum FieldKind {
+pub enum FieldKind {
     Toggle,
     Text,
     Number { min: i64, max: i64 },
@@ -63,7 +63,7 @@ pub(crate) enum FieldKind {
 
 impl FieldKind {
     /// Wire name, also used as the histogram key in `--print-config`.
-    pub(crate) fn name(&self) -> &'static str {
+    pub fn name(&self) -> &'static str {
         match self {
             Self::Toggle => "toggle",
             Self::Text => "text",
@@ -72,12 +72,12 @@ impl FieldKind {
         }
     }
 
-    pub(crate) fn is_textual(&self) -> bool {
+    pub fn is_textual(&self) -> bool {
         matches!(self, Self::Text | Self::Number { .. })
     }
 
-    #[cfg(test)]
-    pub(crate) fn options(&self) -> &[ConfigOption] {
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn options(&self) -> &[ConfigOption] {
         match self {
             Self::Choice { options } => options,
             _ => &[],
@@ -86,26 +86,26 @@ impl FieldKind {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) struct ConfigField {
-    pub(crate) id: String,
-    pub(crate) title: String,
+pub struct ConfigField {
+    pub id: String,
+    pub title: String,
     /// Localization key from the bridge; the GPUI app has no string table yet.
-    pub(crate) title_key: String,
-    pub(crate) kind: FieldKind,
-    pub(crate) default: Value,
+    pub title_key: String,
+    pub kind: FieldKind,
+    pub default: Value,
     /// Capability names the host must advertise, e.g. `wine.configuration`.
-    pub(crate) requires: Vec<String>,
+    pub requires: Vec<String>,
     /// Platforms the host filtered for; empty means unrestricted.
-    pub(crate) platforms: Vec<String>,
+    pub platforms: Vec<String>,
 }
 
 impl ConfigField {
-    pub(crate) fn display_title(&self) -> &str {
+    pub fn display_title(&self) -> &str {
         crate::i18n::config::field_title(&self.title_key, &self.id, &self.title)
     }
 
     /// Whether the connected helper advertises everything this field needs.
-    pub(crate) fn enabled(&self, capabilities: &[String]) -> bool {
+    pub fn enabled(&self, capabilities: &[String]) -> bool {
         self.requires
             .iter()
             .all(|required| capabilities.iter().any(|held| held == required))
@@ -114,7 +114,7 @@ impl ConfigField {
 
 /// Decode `configuration.schema`. Fields and choices are filtered against the
 /// platform the helper reported, so a macOS-only option never renders on Linux.
-pub(crate) fn decode_schema(raw: &Value, platform: &str) -> Result<Vec<ConfigField>, String> {
+pub fn decode_schema(raw: &Value, platform: &str) -> Result<Vec<ConfigField>, String> {
     let fields = raw
         .as_array()
         .ok_or_else(|| "configuration.schema did not return an array".to_owned())?;
@@ -276,7 +276,7 @@ fn required_kind(
 }
 
 /// The stored values, with the schema default filling any key the file omits.
-pub(crate) fn resolved_values(
+pub fn resolved_values(
     fields: &[ConfigField],
     read: &Value,
 ) -> BTreeMap<String, Value> {
@@ -294,7 +294,7 @@ pub(crate) fn resolved_values(
 }
 
 /// A field's value as the row shows it. Toggles have no text form.
-pub(crate) fn display_value(field: &ConfigField, value: &Value) -> Option<String> {
+pub fn display_value(field: &ConfigField, value: &Value) -> Option<String> {
     match (&field.kind, value) {
         (FieldKind::Toggle, _) => None,
         (FieldKind::Choice { options }, Value::String(id)) => {
@@ -310,7 +310,7 @@ pub(crate) fn display_value(field: &ConfigField, value: &Value) -> Option<String
 /// Text and number rows commit what the user typed. Numbers must parse and fit
 /// the schema range; the helper rejects the same values, so this is a local
 /// pre-check that keeps a bad edit off the wire.
-pub(crate) fn encode_edit(field: &ConfigField, raw: &str) -> Result<Value, String> {
+pub fn encode_edit(field: &ConfigField, raw: &str) -> Result<Value, String> {
     let title = field.display_title();
     match &field.kind {
         FieldKind::Text => Ok(json!(raw)),
@@ -334,7 +334,7 @@ pub(crate) fn encode_edit(field: &ConfigField, raw: &str) -> Result<Value, Strin
 }
 
 /// One `configuration.set` request for exactly one field.
-pub(crate) fn set_payload(container: &str, field: &str, value: &Value) -> Value {
+pub fn set_payload(container: &str, field: &str, value: &Value) -> Value {
     json!({
         "container": container,
         "field": field,
@@ -343,7 +343,7 @@ pub(crate) fn set_payload(container: &str, field: &str, value: &Value) -> Value 
 }
 
 /// `environment.set`; `None` removes the key.
-pub(crate) fn environment_payload(container: &str, key: &str, value: Option<&str>) -> Value {
+pub fn environment_payload(container: &str, key: &str, value: Option<&str>) -> Value {
     json!({
         "container": container,
         "key": key,
@@ -353,7 +353,7 @@ pub(crate) fn environment_payload(container: &str, key: &str, value: Option<&str
 
 /// Environment variable names: non-empty, no `=`, no NUL. The helper enforces
 /// the same rule in `ConfigurationFile.setEnvironmentVariable`.
-pub(crate) fn validate_environment_name(raw: &str) -> Result<&str, &'static str> {
+pub fn validate_environment_name(raw: &str) -> Result<&str, &'static str> {
     let key = raw.trim();
     if key.is_empty() {
         return Err(crate::i18n::s().program_settings.variable_name_cannot_be_empty);
@@ -368,7 +368,7 @@ pub(crate) fn validate_environment_name(raw: &str) -> Result<&str, &'static str>
 }
 
 /// Sorted key/value pairs, the order the rows render in.
-pub(crate) fn environment_rows(values: &BTreeMap<String, String>) -> Vec<(&str, &str)> {
+pub fn environment_rows(values: &BTreeMap<String, String>) -> Vec<(&str, &str)> {
     values
         .iter()
         .map(|(key, value)| (key.as_str(), value.as_str()))
@@ -378,13 +378,13 @@ pub(crate) fn environment_rows(values: &BTreeMap<String, String>) -> Vec<(&str, 
 // MARK: - Sections
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) struct SectionSpec {
-    pub(crate) id: &'static str,
-    pub(crate) title: &'static str,
+pub struct SectionSpec {
+    pub id: &'static str,
+    pub title: &'static str,
 }
 
 impl SectionSpec {
-    pub(crate) fn display_title(&self) -> &'static str {
+    pub fn display_title(&self) -> &'static str {
         crate::i18n::config::section_title(self.id)
     }
 }
@@ -392,7 +392,7 @@ impl SectionSpec {
 /// `ContainerConfiguration.sections` order and titles, plus the program section
 /// (`ContainerConfiguration.programSections`). `other` only appears when the
 /// helper reports a field this table has not learned yet.
-pub(crate) const SECTIONS: &[SectionSpec] = &[
+pub const SECTIONS: &[SectionSpec] = &[
     SectionSpec { id: "wine", title: "Wine" },
     SectionSpec { id: "launcher", title: "启动器兼容性" },
     SectionSpec { id: "input", title: "输入与控制器" },
@@ -410,7 +410,7 @@ pub(crate) const SECTIONS: &[SectionSpec] = &[
 const OTHER: &SectionSpec = &SECTIONS[SECTIONS.len() - 1];
 
 /// The section a field id belongs to, as `ContainerConfiguration` groups it.
-pub(crate) fn section_for(field_id: &str) -> &'static SectionSpec {
+pub fn section_for(field_id: &str) -> &'static SectionSpec {
     let id = match field_id {
         "windowsVersion" | "enhancedSync" | "asfTimestampBase" | "avxEnabled" => "wine",
         "launcherCompatibilityMode" | "launcherMode" | "detectedLauncher" | "launcherLocale"
@@ -438,13 +438,13 @@ pub(crate) fn section_for(field_id: &str) -> &'static SectionSpec {
 }
 
 /// One rendered section: its header plus the fields in schema order.
-pub(crate) struct Section<'a> {
-    pub(crate) spec: &'static SectionSpec,
-    pub(crate) fields: Vec<&'a ConfigField>,
+pub struct Section<'a> {
+    pub spec: &'static SectionSpec,
+    pub fields: Vec<&'a ConfigField>,
 }
 
 /// Group decoded fields into sections, preserving the helper's field order.
-pub(crate) fn group_sections(fields: &[ConfigField]) -> Vec<Section<'_>> {
+pub fn group_sections(fields: &[ConfigField]) -> Vec<Section<'_>> {
     let mut sections: Vec<Section<'_>> = Vec::new();
     for field in fields {
         let spec = section_for(&field.id);
@@ -460,7 +460,7 @@ pub(crate) fn group_sections(fields: &[ConfigField]) -> Vec<Section<'_>> {
 }
 
 /// Kinds histogram for `--print-config`, in a stable order.
-pub(crate) fn kind_histogram(fields: &[ConfigField]) -> BTreeMap<&'static str, usize> {
+pub fn kind_histogram(fields: &[ConfigField]) -> BTreeMap<&'static str, usize> {
     let mut histogram = BTreeMap::new();
     for field in fields {
         *histogram.entry(field.kind.name()).or_insert(0) += 1;

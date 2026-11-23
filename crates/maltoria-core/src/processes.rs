@@ -11,19 +11,19 @@ use crate::bridge::dto::ProcessDto;
 
 /// Poll cadence while at least one process is alive: exits are changes the
 /// page has to show quickly.
-pub(crate) const ALIVE_POLL: Duration = Duration::from_secs(3);
+pub const ALIVE_POLL: Duration = Duration::from_secs(3);
 /// Poll cadence when nothing runs: the list can only change if something is
 /// started elsewhere, and the next tick still reports it.
-pub(crate) const IDLE_POLL: Duration = Duration::from_secs(8);
+pub const IDLE_POLL: Duration = Duration::from_secs(8);
 
 /// Cadence selection as a pure function so the alive/idle split is testable.
-pub(crate) fn poll_interval(any_alive: bool) -> Duration {
+pub fn poll_interval(any_alive: bool) -> Duration {
     if any_alive { ALIVE_POLL } else { IDLE_POLL }
 }
 
 /// What a `processes.kill` reply did to the optimistically removed row.
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) enum KillOutcome {
+pub enum KillOutcome {
     /// No removal was pending for this PID (a duplicate reply).
     Unknown,
     /// The helper killed the process; the row stays off screen.
@@ -34,7 +34,7 @@ pub(crate) enum KillOutcome {
 }
 
 #[derive(Debug, Default)]
-pub(crate) struct ProcessTable {
+pub struct ProcessTable {
     rows: Vec<ProcessDto>,
     /// Rows pulled off screen for a kill, with their list index, restored on a
     /// failed reply. Polls keep hiding them until the reply settles.
@@ -43,28 +43,28 @@ pub(crate) struct ProcessTable {
 
 impl ProcessTable {
     /// Replace the rows with the newest snapshot, keeping pending kills hidden.
-    pub(crate) fn apply(&mut self, rows: Vec<ProcessDto>) {
+    pub fn apply(&mut self, rows: Vec<ProcessDto>) {
         self.rows = rows
             .into_iter()
             .filter(|row| !self.pending.contains_key(&row.pid))
             .collect();
     }
 
-    pub(crate) fn rows(&self) -> &[ProcessDto] {
+    pub fn rows(&self) -> &[ProcessDto] {
         &self.rows
     }
 
-    pub(crate) fn is_empty(&self) -> bool {
+    pub fn is_empty(&self) -> bool {
         self.rows.is_empty()
     }
 
     /// Whether anything is on screen — drives [`poll_interval`].
-    pub(crate) fn any_alive(&self) -> bool {
+    pub fn any_alive(&self) -> bool {
         !self.rows.is_empty()
     }
 
     /// Optimistic removal. Returns `false` when no such row is on screen.
-    pub(crate) fn begin_kill(&mut self, pid: i64) -> bool {
+    pub fn begin_kill(&mut self, pid: i64) -> bool {
         let Some(index) = self.rows.iter().position(|row| row.pid == pid) else {
             return false;
         };
@@ -75,7 +75,7 @@ impl ProcessTable {
 
     /// Settle the kill. A `killed: true` reply finishes the removal; anything
     /// else puts the row back where it was.
-    pub(crate) fn finish_kill(&mut self, pid: i64, killed: bool) -> KillOutcome {
+    pub fn finish_kill(&mut self, pid: i64, killed: bool) -> KillOutcome {
         let Some((index, row)) = self.pending.remove(&pid) else {
             return KillOutcome::Unknown;
         };

@@ -3,27 +3,27 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
-pub(crate) struct Candidate {
-    pub(crate) path: String,
-    pub(crate) name: String,
-    pub(crate) device: String,
-    pub(crate) inode: String,
+pub struct Candidate {
+    pub path: String,
+    pub name: String,
+    pub device: String,
+    pub inode: String,
 }
 
 #[derive(Default)]
-pub(crate) struct ImportState {
-    pub(crate) request: u64,
-    pub(crate) root: Option<String>,
-    pub(crate) candidates: Vec<Candidate>,
-    pub(crate) selected: BTreeSet<String>,
-    pub(crate) loading: bool,
-    pub(crate) importing: bool,
-    pub(crate) error: Option<String>,
-    pub(crate) completed: Option<usize>,
+pub struct ImportState {
+    pub request: u64,
+    pub root: Option<String>,
+    pub candidates: Vec<Candidate>,
+    pub selected: BTreeSet<String>,
+    pub loading: bool,
+    pub importing: bool,
+    pub error: Option<String>,
+    pub completed: Option<usize>,
 }
 
 impl ImportState {
-    pub(crate) fn scanning(request: u64, root: Option<String>) -> Self {
+    pub fn scanning(request: u64, root: Option<String>) -> Self {
         Self {
             request,
             root,
@@ -31,7 +31,7 @@ impl ImportState {
             ..Self::default()
         }
     }
-    pub(crate) fn loaded(&mut self, request: u64, candidates: Vec<Candidate>) {
+    pub fn loaded(&mut self, request: u64, candidates: Vec<Candidate>) {
         if self.request != request {
             return;
         }
@@ -44,7 +44,7 @@ impl ImportState {
             .collect();
         self.selected.clear();
     }
-    pub(crate) fn failed(&mut self, request: u64, error: String) {
+    pub fn failed(&mut self, request: u64, error: String) {
         if self.request != request {
             return;
         }
@@ -56,7 +56,7 @@ impl ImportState {
             error
         });
     }
-    pub(crate) fn toggle(&mut self, path: &str, checked: bool) {
+    pub fn toggle(&mut self, path: &str, checked: bool) {
         if self.loading
             || self.importing
             || !self
@@ -76,14 +76,14 @@ impl ImportState {
             self.selected.remove(path);
         }
     }
-    pub(crate) fn selection(&self) -> Vec<Candidate> {
+    pub fn selection(&self) -> Vec<Candidate> {
         self.candidates
             .iter()
             .filter(|candidate| self.selected.contains(&candidate.path))
             .cloned()
             .collect()
     }
-    pub(crate) fn imported(&mut self, request: u64, paths: &[String], count: usize) {
+    pub fn imported(&mut self, request: u64, paths: &[String], count: usize) {
         if self.request != request {
             return;
         }
@@ -97,7 +97,7 @@ impl ImportState {
 }
 
 /// Treat only a complete acknowledgement of the selected identities as success.
-pub(crate) fn import_reply(
+pub fn import_reply(
     value: serde_json::Value,
     expected: &[Candidate],
 ) -> Result<usize, String> {

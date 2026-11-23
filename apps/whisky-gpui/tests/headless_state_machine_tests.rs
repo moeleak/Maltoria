@@ -29,6 +29,11 @@ fn fixture_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures")
 }
 
+/// The fixtures the core's own tests share: the bridge catalogue and schema.
+fn core_fixture_dir() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../crates/maltoria-core/tests/fixtures")
+}
+
 /// One hermetic fixture environment: a unique per-test temp root that doubles
 /// as the child's HOME/XDG base so nothing touches real user state.
 struct CliFixture {
@@ -77,7 +82,7 @@ impl CliFixture {
             .env("WHISKY_BRIDGE_HELPER", &self.helper)
             .env("WHISKY_BRIDGE_NO_WINE", "1")
             .env("WHISKY_REGISTRY", self.root.join("registry"))
-            .env("MOCK_BRIDGE_ENTRIES", fixture_dir().join("library-entries.json"))
+            .env("MOCK_BRIDGE_ENTRIES", core_fixture_dir().join("library-entries.json"))
             .env("HOME", &self.root)
             .env("XDG_CACHE_HOME", self.root.join("xdg-cache"))
             .env("XDG_CONFIG_HOME", self.root.join("xdg-config"))
@@ -173,7 +178,7 @@ fn test_cli_print_library_against_fixture_helper() {
     );
     let expected_entries = {
         let entries: serde_json::Value =
-            serde_json::from_str(include_str!("fixtures/library-entries.json")).unwrap();
+            serde_json::from_str(include_str!("../../../crates/maltoria-core/tests/fixtures/library-entries.json")).unwrap();
         entries.as_array().expect("entries fixture is a JSON array").len()
     };
 
@@ -250,12 +255,12 @@ fn test_integration_remote_error_wire_shape() {
 
 #[test]
 fn test_integration_fixtures_validation() {
-    let entries_raw = include_str!("fixtures/library-entries.json");
+    let entries_raw = include_str!("../../../crates/maltoria-core/tests/fixtures/library-entries.json");
     let parsed: serde_json::Value = serde_json::from_str(entries_raw).expect("Valid JSON fixture");
     let arr = parsed.as_array().expect("Array of entries");
     assert!(!arr.is_empty(), "Fixture library entries must not be empty");
 
-    let schema_raw = include_str!("fixtures/configuration-schema.json");
+    let schema_raw = include_str!("../../../crates/maltoria-core/tests/fixtures/configuration-schema.json");
     let schema: serde_json::Value = serde_json::from_str(schema_raw).expect("Valid schema JSON");
     assert!(schema.is_array(), "Configuration schema must be an array of field definitions");
     assert!(!schema.as_array().unwrap().is_empty());

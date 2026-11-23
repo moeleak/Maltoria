@@ -2,7 +2,7 @@
 
 use crate::i18n::{lookup, s};
 
-pub(crate) fn play_time(hours: u64, minutes: u64) -> String {
+pub fn play_time(hours: u64, minutes: u64) -> String {
     let st = &s().statistics;
     match (hours, minutes) {
         (0, m) => st.play_time_minutes(m),
@@ -11,7 +11,7 @@ pub(crate) fn play_time(hours: u64, minutes: u64) -> String {
     }
 }
 
-pub(crate) fn statistics_duration(minutes: u64) -> String {
+pub fn statistics_duration(minutes: u64) -> String {
     if minutes < 60 {
         play_time(0, minutes)
     } else {
@@ -19,19 +19,19 @@ pub(crate) fn statistics_duration(minutes: u64) -> String {
     }
 }
 
-pub(crate) fn statistics_month(month: u32) -> String {
+pub fn statistics_month(month: u32) -> String {
     lookup(s().maps.month_name, &month.to_string())
         .unwrap_or_default()
         .to_owned()
 }
 
-pub(crate) fn sort_tooltip(current: &str, reversed: bool) -> String {
+pub fn sort_tooltip(current: &str, reversed: bool) -> String {
     let lib = &s().library;
     let order = if reversed { lib.sort_order_desc } else { "" };
     lib.sort_tooltip_current(current, order)
 }
 
-pub(crate) fn engine_features_summary(unverified: &[&str], unavailable: &[&str]) -> String {
+pub fn engine_features_summary(unverified: &[&str], unavailable: &[&str]) -> String {
     let st = &s().settings;
     let mut summary = String::new();
     if !unverified.is_empty() {
@@ -46,11 +46,11 @@ pub(crate) fn engine_features_summary(unverified: &[&str], unavailable: &[&str])
     summary
 }
 
-pub(crate) fn sidebar_title_with_bottle(page: &str, bottle: &str) -> String {
+pub fn sidebar_title_with_bottle(page: &str, bottle: &str) -> String {
     s().windows.sidebar_title_bottle(bottle, page)
 }
 
-pub(crate) fn notice_bottle_renamed(name: Option<&str>) -> String {
+pub fn notice_bottle_renamed(name: Option<&str>) -> String {
     let st = &s().state;
     match name {
         Some(n) => st.notice_bottle_renamed(n),
@@ -58,7 +58,7 @@ pub(crate) fn notice_bottle_renamed(name: Option<&str>) -> String {
     }
 }
 
-pub(crate) fn notice_bottle_duplicated(name: Option<&str>) -> String {
+pub fn notice_bottle_duplicated(name: Option<&str>) -> String {
     let st = &s().state;
     match name {
         Some(n) => st.notice_bottle_duplicated(n),
@@ -66,7 +66,7 @@ pub(crate) fn notice_bottle_duplicated(name: Option<&str>) -> String {
     }
 }
 
-pub(crate) fn notice_bottle_exported(path: Option<&str>) -> String {
+pub fn notice_bottle_exported(path: Option<&str>) -> String {
     let st = &s().state;
     match path {
         Some(p) => st.notice_bottle_exported(p),
@@ -74,7 +74,7 @@ pub(crate) fn notice_bottle_exported(path: Option<&str>) -> String {
     }
 }
 
-pub(crate) fn notice_gamedb_applied(count: usize, missing: Option<&str>) -> String {
+pub fn notice_gamedb_applied(count: usize, missing: Option<&str>) -> String {
     let st = &s().state;
     match missing {
         Some(m) => st.notice_gamedb_applied_missing(count, m),
@@ -82,7 +82,7 @@ pub(crate) fn notice_gamedb_applied(count: usize, missing: Option<&str>) -> Stri
     }
 }
 
-pub(crate) fn notice_sync_done(matched: usize, failed: usize) -> String {
+pub fn notice_sync_done(matched: usize, failed: usize) -> String {
     let st = &s().state;
     if failed > 0 {
         st.notice_sync_done_full(failed, matched)
@@ -91,7 +91,7 @@ pub(crate) fn notice_sync_done(matched: usize, failed: usize) -> String {
     }
 }
 
-pub(crate) fn notice_wine_installed(version: Option<&str>) -> String {
+pub fn notice_wine_installed(version: Option<&str>) -> String {
     let st = &s().state;
     match version {
         Some(v) => st.notice_wine_installed(v),
@@ -99,11 +99,11 @@ pub(crate) fn notice_wine_installed(version: Option<&str>) -> String {
     }
 }
 
-pub(crate) fn overlay_opacity_label(pct: f32) -> String {
+pub fn overlay_opacity_label(pct: f32) -> String {
     s().linux_hud.overlay_opacity(format!("{pct:.0}"))
 }
 
-pub(crate) fn capture_and_subtitle_errors(subtitle_error: &str, capture_error: &str) -> String {
+pub fn capture_and_subtitle_errors(subtitle_error: &str, capture_error: &str) -> String {
     let st = &s().capture;
     match (subtitle_error.is_empty(), capture_error.is_empty()) {
         (false, false) => st.capture_both_errors(capture_error, subtitle_error),

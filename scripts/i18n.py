@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check and query GPUI locale resources (apps/whisky-gpui/locales/*.toml).
+"""Check and query the locale resources (crates/maltoria-core/locales/*.toml).
 
 Commands:
   check        Validate locale files, call-site patterns, literals and bridge
@@ -18,12 +18,20 @@ import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-APP = ROOT / "apps" / "whisky-gpui"
-LOCALES = APP / "locales"
-SRC = APP / "src"
+CORE = ROOT / "crates" / "maltoria-core"
+LOCALES = CORE / "locales"
+# The Rust sources that read the strings: the core and each app.
+SRC_ROOTS = (
+    CORE / "src",
+    ROOT / "apps" / "whisky-gpui" / "src",
+    ROOT / "apps" / "maltoria" / "src",
+)
 SWIFT_SRC = ROOT / "WhiskyBridge" / "Sources"
 ALLOWLIST_PATH = LOCALES / "i18n-allowlist.toml"
 
+# Attributes that keep an item out of shipping builds: tests, and the helpers
+# the core exports for the apps' tests.
+TEST_GATES = ("#[cfg(test)]", '#[cfg(any(test, feature = "test-support"))]')
 PLACEHOLDER_RE = re.compile(r"\{([a-zA-Z_][a-zA-Z0-9_]*)\}")
 CJK_RE = re.compile(r"[぀-ヿ一-鿿가-힯]")
 PLURAL_CATEGORIES = {"zero", "one", "few", "many", "other"}
@@ -237,7 +245,13 @@ def validate_locales(files):
 
 
 def rust_files():
-    return sorted(p for p in SRC.rglob("*.rs"))
+    """Each Rust source, with the source root its path is relative to."""
+    return sorted(
+        (root, path)
+        for root in SRC_ROOTS
+        if root.is_dir()
+        for path in root.rglob("*.rs")
+    )
 
 
 def sanitized_lines(text):
@@ -316,16 +330,18 @@ def sanitized_lines(text):
 
 
 def strip_test_regions(text):
-    """Return the set of 1-based line numbers inside #[cfg(test)] items.
+    """Return the set of 1-based line numbers inside test-only items.
 
-    Heuristic: a `#[cfg(test)]` line marks the start; the following braced block
+    Heuristic: a `TEST_GATES` line marks the start; the following braced block
     is test code.
     """
     lines = sanitized_lines(text)
+    # Gates are matched before strings are blanked: `"test-support"` is one.
+    raw = text.split("\n")
     test_lines = set()
     i = 0
     while i < len(lines):
-        if "#[cfg(test)]" in lines[i]:
+        if any(gate in raw[i] for gate in TEST_GATES):
             depth = 0
             j = i
             opened = False
@@ -383,8 +399,8 @@ def scan_sources():
     banned = []  # (file, pattern literal)
     literals = []  # (file, literal content, line number)
     corpus = []  # non-test source text per file, for unused-key search
-    for path in rust_files():
-        rel = path.relative_to(SRC).as_posix()
+    for root, path in rust_files():
+        rel = path.relative_to(root).as_posix()
         text = path.read_text()
         test_lines = strip_test_regions(text)
         is_test_file = rel.endswith("_tests.rs") or rel.startswith("tests/")
@@ -583,7 +599,7 @@ def cmd_check():
                 sk = f"{sec}.{key}"
                 if allow["unused_keys"].get(sk):
                     continue
-                errors.append(f"unused key: {sk} appears nowhere in apps/whisky-gpui/src")
+                errors.append(f"unused key: {sk} appears nowhere in the Rust sources")
 
     # (c) banned patterns outside src/i18n/.
     grouped = {}

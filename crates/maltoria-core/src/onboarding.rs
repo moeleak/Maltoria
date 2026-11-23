@@ -3,22 +3,22 @@ use std::collections::BTreeMap;
 
 use serde_json::{Value, json};
 
-pub(crate) const COMPLETED: &str = "libraryOnboardingCompleted";
-pub(crate) const ENABLED: &str = "libraryMetadataEnabledSources";
-pub(crate) const DEFAULT_SOURCE: &str = "libraryMetadataDefaultSource";
-pub(crate) const SOURCES: [&str; 5] = ["bangumi", "vndb", "steam", "ymgal", "nextmoe"];
-pub(crate) const CATEGORIES: [(&str, &str); 4] = [
+pub const COMPLETED: &str = "libraryOnboardingCompleted";
+pub const ENABLED: &str = "libraryMetadataEnabledSources";
+pub const DEFAULT_SOURCE: &str = "libraryMetadataDefaultSource";
+pub const SOURCES: [&str; 5] = ["bangumi", "vndb", "steam", "ymgal", "nextmoe"];
+pub const CATEGORIES: [(&str, &str); 4] = [
     ("basic", "libraryMetadataBasicSource"),
     ("summary", "libraryMetadataSummarySource"),
     ("cover", "libraryMetadataCoverSource"),
     ("characters", "libraryMetadataCharactersSource"),
 ];
 
-pub(crate) fn source_label(id: &str) -> &str {
+pub fn source_label(id: &str) -> &str {
     crate::i18n::lookup(crate::i18n::s().maps.source_label, id).unwrap_or(id)
 }
 
-pub(crate) fn category_label(id: &str) -> &str {
+pub fn category_label(id: &str) -> &str {
     let m = &crate::i18n::s().metadata;
     match id {
         "basic" => m.cat_basic,
@@ -30,10 +30,10 @@ pub(crate) fn category_label(id: &str) -> &str {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct MetadataPreferences {
-    pub(crate) default_source: String,
-    pub(crate) category_sources: BTreeMap<String, String>,
-    pub(crate) enabled_sources: Vec<String>,
+pub struct MetadataPreferences {
+    pub default_source: String,
+    pub category_sources: BTreeMap<String, String>,
+    pub enabled_sources: Vec<String>,
 }
 
 impl Default for MetadataPreferences {
@@ -51,7 +51,7 @@ fn known(source: &str) -> bool {
 }
 
 impl MetadataPreferences {
-    pub(crate) fn read(values: &Value) -> Self {
+    pub fn read(values: &Value) -> Self {
         let mut result = Self::default();
         if let Some(source) = values
             .get(DEFAULT_SOURCE)
@@ -78,7 +78,7 @@ impl MetadataPreferences {
         result
     }
 
-    pub(crate) fn values(&self) -> Value {
+    pub fn values(&self) -> Value {
         let mut values = serde_json::Map::new();
         values.insert(DEFAULT_SOURCE.into(), json!(self.default_source));
         values.insert(ENABLED.into(), json!(self.enabled_sources.join(",")));
@@ -98,17 +98,17 @@ impl MetadataPreferences {
 }
 
 #[derive(Clone)]
-pub(crate) struct Onboarding {
-    pub(crate) draft: MetadataPreferences,
-    pub(crate) welcome: bool,
-    pub(crate) step: usize,
-    pub(crate) expanded: bool,
-    pub(crate) saving: bool,
-    pub(crate) error: Option<String>,
+pub struct Onboarding {
+    pub draft: MetadataPreferences,
+    pub welcome: bool,
+    pub step: usize,
+    pub expanded: bool,
+    pub saving: bool,
+    pub error: Option<String>,
 }
 
 impl Onboarding {
-    pub(crate) fn new(draft: MetadataPreferences, welcome: bool) -> Self {
+    pub fn new(draft: MetadataPreferences, welcome: bool) -> Self {
         Self {
             draft,
             welcome,

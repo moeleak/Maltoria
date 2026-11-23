@@ -3,21 +3,21 @@ use serde::Deserialize;
 
 #[derive(Clone, Debug, Deserialize)]
 #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
-pub(crate) struct TerminalDto {
-    pub(crate) id: String,
-    pub(crate) name: String,
-    pub(crate) path: String,
+pub struct TerminalDto {
+    pub id: String,
+    pub name: String,
+    pub path: String,
 }
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct TerminalsDto {
-    pub(crate) available: Vec<TerminalDto>,
-    pub(crate) display_available: bool,
+pub struct TerminalsDto {
+    pub available: Vec<TerminalDto>,
+    pub display_available: bool,
 }
 
 impl TerminalsDto {
-    pub(crate) fn can_open(&self, preferred: &str) -> bool {
+    pub fn can_open(&self, preferred: &str) -> bool {
         self.display_available
             && self
                 .available
@@ -50,12 +50,12 @@ mod tests {
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
-pub(crate) struct DesktopDto {
-    pub(crate) installed: bool,
-    pub(crate) path: String,
-    pub(crate) cache_updated: Option<bool>,
+pub struct DesktopDto {
+    pub installed: bool,
+    pub path: String,
+    pub cache_updated: Option<bool>,
     #[serde(default)]
-    pub(crate) needs_update: bool,
+    pub needs_update: bool,
     #[serde(default)]
-    pub(crate) updated: bool,
+    pub updated: bool,
 }

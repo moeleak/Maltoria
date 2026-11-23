@@ -10,7 +10,7 @@
 /// `{code}: {localized}` for known codes; codes whose message carries unique
 /// context keep the original message appended; anything else falls back to
 /// `{code}: {message}`.
-pub(crate) fn describe(code: &str, message: &str) -> String {
+pub fn describe(code: &str, message: &str) -> String {
     if code.is_empty() {
         return message.to_owned();
     }
@@ -35,7 +35,7 @@ pub(crate) fn describe(code: &str, message: &str) -> String {
 
 /// Localized text for a bare error code (capture HUD `lastError`, subtitle
 /// `error`, and the `capture_*` hook codes). `None` when the code is unknown.
-pub(crate) fn code_text(code: &str) -> Option<&'static str> {
+pub fn code_text(code: &str) -> Option<&'static str> {
     if let Some(inner) = code.strip_prefix("capture_") {
         return lookup(crate::i18n::s().maps.bridge_capture, inner);
     }

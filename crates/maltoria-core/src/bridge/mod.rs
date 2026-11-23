@@ -6,10 +6,10 @@
 //! restartable: a failed or timed-out session can be replaced without
 //! restarting the UI process.
 
-pub(crate) mod dto;
-pub(crate) mod supervisor;
+pub mod dto;
+pub mod supervisor;
 
-pub(crate) use supervisor::{
+pub use supervisor::{
     BottleCreateUpdate, BottleOperation, BottleOperationUpdate, BridgeEvent, BridgeSupervisor,
     DiagnosticKind, DiagnosticUpdate, EntryMutation, FolderEdit, MetadataUpdate, ProgramMutation,
     ScanUpdate, SetupUpdate, diagnose_launch, print_config, print_folders, print_library,
@@ -17,7 +17,7 @@ pub(crate) use supervisor::{
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) enum BridgeStatus {
+pub enum BridgeStatus {
     Locating,
     Starting,
     Connected {
@@ -33,7 +33,7 @@ pub(crate) enum BridgeStatus {
 }
 
 impl BridgeStatus {
-    pub(crate) fn label(&self) -> &'static str {
+    pub fn label(&self) -> &'static str {
         let d = &crate::i18n::s().dialogs;
         match self {
             Self::Locating | Self::Starting => d.bridge_connecting,

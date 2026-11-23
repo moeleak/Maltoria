@@ -55,9 +55,9 @@ const CALL_TIMEOUT: Duration = Duration::from_secs(5);
 const PROVIDER_PROBE_TIMEOUT: Duration = Duration::from_secs(240);
 const CAPTURE_OPERATION_TIMEOUT: Duration = Duration::from_secs(60);
 /// Native dialogs allow human interaction; Linux's chooser bounds itself at 300 s.
-pub(crate) const PICKER_TIMEOUT: Duration = Duration::from_secs(330);
-pub(crate) const BACKOFF_MIN_MS: u64 = 500;
-pub(crate) const BACKOFF_MAX_MS: u64 = 8_000;
+pub const PICKER_TIMEOUT: Duration = Duration::from_secs(330);
+pub const BACKOFF_MIN_MS: u64 = 500;
+pub const BACKOFF_MAX_MS: u64 = 8_000;
 
 fn translation_call_timeout(method: &str) -> Duration {
     match method {
@@ -73,7 +73,7 @@ fn translation_call_timeout(method: &str) -> Duration {
 const PARK: Duration = Duration::from_secs(3_600);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum EntryMutation {
+pub enum EntryMutation {
     Rating,
     Hidden,
     Tags,
@@ -83,7 +83,7 @@ pub(crate) enum EntryMutation {
 /// Which `programs.*` write a `ProgramFailed` event names, so the UI rolls
 /// back exactly the flag that was rejected.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum ProgramMutation {
+pub enum ProgramMutation {
     Pin,
     Block,
 }
@@ -91,7 +91,7 @@ pub(crate) enum ProgramMutation {
 /// A bottle lifecycle action. `Rename` and `CleanCache` are answered directly;
 /// the rest return a `BridgeJobStore` job and are polled.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum BottleOperation {
+pub enum BottleOperation {
     Rename,
     Remove,
     Move,
@@ -126,7 +126,7 @@ impl BottleOperation {
 
 /// One lifecycle operation as the UI sees it.
 #[derive(Debug)]
-pub(crate) enum BottleOperationUpdate {
+pub enum BottleOperationUpdate {
     Started,
     Completed {
         path: Option<String>,
@@ -139,7 +139,7 @@ pub(crate) enum BottleOperationUpdate {
 
 /// The three `bottle.diagnostics` / `audio.test` jobs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum DiagnosticKind {
+pub enum DiagnosticKind {
     Report,
     Export,
     Checks,
@@ -148,7 +148,7 @@ pub(crate) enum DiagnosticKind {
 
 /// One diagnostics/audio job as the UI sees it.
 #[derive(Debug)]
-pub(crate) enum DiagnosticUpdate {
+pub enum DiagnosticUpdate {
     Started,
     Report {
         report: String,
@@ -169,7 +169,7 @@ pub(crate) enum DiagnosticUpdate {
 
 /// WhiskyWine runtime setup state.
 #[derive(Debug)]
-pub(crate) enum SetupUpdate {
+pub enum SetupUpdate {
     Status {
         installed: bool,
         /// `managedInstalled` — absent on helpers that predate external
@@ -204,7 +204,7 @@ pub(crate) enum SetupUpdate {
 
 /// `metadata.*` and `gameConfig.*` answers for the Game Info sheet.
 #[derive(Debug)]
-pub(crate) enum MetadataUpdate {
+pub enum MetadataUpdate {
     Record {
         container: String,
         entry_id: String,
@@ -272,7 +272,7 @@ pub(crate) enum MetadataUpdate {
 /// One `folders.*` mutation. Every reply is the whole folder payload, so the UI
 /// never has to merge a local guess.
 #[derive(Debug, Clone)]
-pub(crate) enum FolderEdit {
+pub enum FolderEdit {
     AddRoot(String),
     RemoveRoot(String),
     Assign { path: String, assigned: bool },
@@ -325,7 +325,7 @@ impl FolderEdit {
 /// `BridgeJobStore` strings; `stage` is `scanning` from the helper or `paging`
 /// while this frontend walks `library.page`.
 #[derive(Debug)]
-pub(crate) enum ScanUpdate {
+pub enum ScanUpdate {
     Started {
         job_id: String,
     },
@@ -347,7 +347,7 @@ pub(crate) enum ScanUpdate {
 /// `bottle.create` job lifecycle. On success the worker also re-reads the
 /// catalogue so the new bottle appears without a separate Refresh.
 #[derive(Debug)]
-pub(crate) enum BottleCreateUpdate {
+pub enum BottleCreateUpdate {
     Started {
         job_id: String,
     },
@@ -367,7 +367,7 @@ pub(crate) enum BottleCreateUpdate {
 }
 
 #[derive(Debug)]
-pub(crate) enum BridgeEvent {
+pub enum BridgeEvent {
     ShutdownFailed { reason: String },
     ImportCandidates { request: u64, candidates: Vec<crate::container_import::Candidate> },
     ImportCandidatesFailed { request: u64, reason: String },
@@ -1109,17 +1109,17 @@ enum Wake {
 /// Owns the supervisor thread. Dropping it asks the worker to close the helper
 /// and exit; it is not joined because a helper call may still be in flight and
 /// join would block the UI thread.
-pub(crate) struct BridgeSupervisor {
+pub struct BridgeSupervisor {
     commands: CommandSender<Command>,
     _thread: Option<std::thread::JoinHandle<()>>,
 }
 
 impl BridgeSupervisor {
-    pub(crate) fn start() -> (Self, smol::channel::Receiver<BridgeEvent>) {
+    pub fn start() -> (Self, smol::channel::Receiver<BridgeEvent>) {
         Self::start_with_spawner(default_spawner)
     }
 
-    pub(crate) fn start_with_spawner<F>(spawner: F) -> (Self, smol::channel::Receiver<BridgeEvent>)
+    pub fn start_with_spawner<F>(spawner: F) -> (Self, smol::channel::Receiver<BridgeEvent>)
     where
         F: FnMut() -> Result<Client, String> + Send + 'static,
     {
@@ -1129,7 +1129,7 @@ impl BridgeSupervisor {
     /// `start_with_spawner` plus a per-worker retry-delay function. Tests
     /// inject a recording delay so backoff assertions are deterministic
     /// without process-global state.
-    pub(crate) fn start_with_spawner_and_backoff<F, B>(
+    pub fn start_with_spawner_and_backoff<F, B>(
         spawner: F,
         backoff: B,
     ) -> (Self, smol::channel::Receiver<BridgeEvent>)
@@ -1161,11 +1161,11 @@ impl BridgeSupervisor {
     }
 
     /// Ask the worker to discard the current session and connect again now.
-    pub(crate) fn retry(&self) {
+    pub fn retry(&self) {
         let _ = self.commands.send(Command::Retry);
     }
 
-    pub(crate) fn translation_request(&self, request: u64, method: &str, params: serde_json::Value) -> Result<(), String> {
+    pub fn translation_request(&self, request: u64, method: &str, params: serde_json::Value) -> Result<(), String> {
         self.commands.send(Command::TranslationCall { request, method: method.to_owned(), params })
             .map_err(|_| "Translation bridge supervisor is disconnected".to_owned())
     }
@@ -1173,8 +1173,8 @@ impl BridgeSupervisor {
     /// Test seam: a supervisor whose command channel has no worker behind it.
     /// Sends fail silently and no helper is spawned; headless UI tests pair
     /// this with an empty `BridgeEvent` channel they retain.
-    #[cfg(test)]
-    pub(crate) fn disconnected_for_tests() -> Self {
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn disconnected_for_tests() -> Self {
         let (commands, worker) = mpsc::channel();
         drop(worker);
         Self {
@@ -1183,8 +1183,8 @@ impl BridgeSupervisor {
         }
     }
 
-    #[cfg(test)]
-    pub(crate) fn recording_for_tests() -> (Self, impl Fn() -> Vec<(String, serde_json::Value)>) {
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn recording_for_tests() -> (Self, impl Fn() -> Vec<(String, serde_json::Value)>) {
         let (commands, worker) = mpsc::channel();
         let supervisor = Self {
             commands,
@@ -1204,7 +1204,7 @@ impl BridgeSupervisor {
 
     /// Queue a read-only library request. The worker coalesces nothing: callers
     /// only send this on an explicit bottle switch or retry, never per frame.
-    pub(crate) fn load_entries(&self, container: &str) {
+    pub fn load_entries(&self, container: &str) {
         let _ = self
             .commands
             .send(Command::LoadEntries(container.to_owned()));
@@ -1212,13 +1212,13 @@ impl BridgeSupervisor {
 
     /// Point the runtime at one container. The reply is a resync: the UI
     /// replaces its table instead of merging.
-    pub(crate) fn configure_runtime(&self, container: &str) {
+    pub fn configure_runtime(&self, container: &str) {
         let _ = self
             .commands
             .send(Command::ConfigureRuntime(container.to_owned()));
     }
 
-    pub(crate) fn launch(&self, container: &str, entry_id: &str, executable: Option<&str>) {
+    pub fn launch(&self, container: &str, entry_id: &str, executable: Option<&str>) {
         let _ = self.commands.send(Command::Launch {
             container: container.to_owned(),
             entry_id: entry_id.to_owned(),
@@ -1227,20 +1227,20 @@ impl BridgeSupervisor {
     }
 
     /// Answer the clipboard prompt. The second call carries the one-use token.
-    pub(crate) fn resolve_clipboard(&self, prompt: ClipboardPrompt, decision: ClipboardDecision) {
+    pub fn resolve_clipboard(&self, prompt: ClipboardPrompt, decision: ClipboardDecision) {
         let _ = self
             .commands
             .send(Command::DecideClipboard { prompt, decision });
     }
 
-    pub(crate) fn cancel(&self, container: &str, entry_id: &str) {
+    pub fn cancel(&self, container: &str, entry_id: &str) {
         let _ = self.commands.send(Command::Cancel {
             container: container.to_owned(),
             entry_id: entry_id.to_owned(),
         });
     }
 
-    pub(crate) fn stop(&self, container: &str, entry_id: &str) {
+    pub fn stop(&self, container: &str, entry_id: &str) {
         let _ = self.commands.send(Command::Stop {
             container: container.to_owned(),
             entry_id: entry_id.to_owned(),
@@ -1248,7 +1248,7 @@ impl BridgeSupervisor {
     }
 
     /// `entry.rating` with `null` clearing the rating.
-    pub(crate) fn set_rating(&self, container: &str, entry_id: &str, rating: Option<i64>) {
+    pub fn set_rating(&self, container: &str, entry_id: &str, rating: Option<i64>) {
         let _ = self.commands.send(Command::SetRating {
             container: container.to_owned(),
             entry_id: entry_id.to_owned(),
@@ -1257,7 +1257,7 @@ impl BridgeSupervisor {
     }
 
     /// `entry.hidden`; the reply carries the record the UI stores.
-    pub(crate) fn set_hidden(&self, container: &str, entry_id: &str, hidden: bool) {
+    pub fn set_hidden(&self, container: &str, entry_id: &str, hidden: bool) {
         let _ = self.commands.send(Command::SetHidden {
             container: container.to_owned(),
             entry_id: entry_id.to_owned(),
@@ -1265,7 +1265,7 @@ impl BridgeSupervisor {
         });
     }
 
-    pub(crate) fn set_tags(&self, container: &str, entry_id: &str, tags: Vec<String>) {
+    pub fn set_tags(&self, container: &str, entry_id: &str, tags: Vec<String>) {
         let _ = self.commands.send(Command::SetTags {
             container: container.to_owned(),
             entry_id: entry_id.to_owned(),
@@ -1273,7 +1273,7 @@ impl BridgeSupervisor {
         });
     }
 
-    pub(crate) fn rename_tag(&self, container: Option<&str>, old_tag: &str, new_tag: &str) {
+    pub fn rename_tag(&self, container: Option<&str>, old_tag: &str, new_tag: &str) {
         let _ = self.commands.send(Command::RenameTag {
             container: container.map(str::to_owned),
             old_tag: old_tag.to_owned(),
@@ -1281,14 +1281,14 @@ impl BridgeSupervisor {
         });
     }
 
-    pub(crate) fn delete_tag(&self, container: Option<&str>, tag: &str) {
+    pub fn delete_tag(&self, container: Option<&str>, tag: &str) {
         let _ = self.commands.send(Command::DeleteTag {
             container: container.map(str::to_owned),
             tag: tag.to_owned(),
         });
     }
 
-    pub(crate) fn set_launch_options(
+    pub fn set_launch_options(
         &self,
         container: &str,
         entry_id: &str,
@@ -1306,30 +1306,30 @@ impl BridgeSupervisor {
     }
 
     /// Read every preference once per connected session.
-    pub(crate) fn resolve_desktop_open(&self, request: u64, id: &str, path: &str) {
+    pub fn resolve_desktop_open(&self, request: u64, id: &str, path: &str) {
         let _ = self.commands.send(Command::ResolveDesktopOpen { request, id: id.into(), path: path.into() });
     }
 
     #[cfg(target_os = "linux")]
-    pub(crate) fn desktop_integration(&self, install: bool) {
+    pub fn desktop_integration(&self, install: bool) {
         let _ = self.commands.send(Command::DesktopIntegration { install });
     }
 
     #[cfg(target_os = "linux")]
-    pub(crate) fn load_terminals(&self) {
+    pub fn load_terminals(&self) {
         let _ = self.commands.send(Command::LoadTerminals);
     }
 
-    pub(crate) fn load_preferences(&self) {
+    pub fn load_preferences(&self) {
         let _ = self.commands.send(Command::LoadPreferences);
     }
 
-    pub(crate) fn save_metadata_preferences(&self, values: serde_json::Value, onboarding: bool) {
+    pub fn save_metadata_preferences(&self, values: serde_json::Value, onboarding: bool) {
         let _ = self.commands.send(Command::SaveMetadataPreferences { values, onboarding });
     }
 
     /// Write one preference. The UI debounces this; the worker just executes.
-    pub(crate) fn set_preference(&self, key: &str, value: serde_json::Value) {
+    pub fn set_preference(&self, key: &str, value: serde_json::Value) {
         let _ = self.commands.send(Command::SetPreference {
             key: key.to_owned(),
             value,
@@ -1337,25 +1337,25 @@ impl BridgeSupervisor {
     }
 
     /// Read the packaged app version once per connected session.
-    pub(crate) fn load_system_info(&self) {
+    pub fn load_system_info(&self) {
         let _ = self.commands.send(Command::LoadSystemInfo);
     }
 
     /// Quit with the stored exit policy. The worker emits `Stopped` when the
     /// session is closed, which is when the UI may call `cx.quit()`.
-    pub(crate) fn shutdown_application(&self) {
+    pub fn shutdown_application(&self) {
         let _ = self.commands.send(Command::ShutdownApplication);
     }
 
     /// `configuration.schema` + `configuration.read` for one bottle.
-    pub(crate) fn load_configuration(&self, container: &str) {
+    pub fn load_configuration(&self, container: &str) {
         let _ = self
             .commands
             .send(Command::LoadConfiguration(container.to_owned()));
     }
 
     /// `configuration.set` for one field; the reply is a whole-file readback.
-    pub(crate) fn set_configuration(
+    pub fn set_configuration(
         &self,
         container: &str,
         field: &str,
@@ -1368,13 +1368,13 @@ impl BridgeSupervisor {
         });
     }
 
-    pub(crate) fn load_folders(&self, container: &str) {
+    pub fn load_folders(&self, container: &str) {
         let _ = self
             .commands
             .send(Command::LoadFolders(container.to_owned()));
     }
 
-    pub(crate) fn edit_folders(&self, container: &str, edit: FolderEdit) {
+    pub fn edit_folders(&self, container: &str, edit: FolderEdit) {
         let _ = self.commands.send(Command::EditFolders {
             container: container.to_owned(),
             edit,
@@ -1382,14 +1382,14 @@ impl BridgeSupervisor {
     }
 
     /// `launchers.read`: which entries auto-start with Whisky for one bottle.
-    pub(crate) fn load_launchers(&self, container: &str) {
+    pub fn load_launchers(&self, container: &str) {
         let _ = self
             .commands
             .send(Command::LoadLaunchers(container.to_owned()));
     }
 
     /// `launchers.setAutoStart`; the reply is the whole set, always authoritative.
-    pub(crate) fn set_launcher_autostart(&self, container: &str, entry_id: &str, enabled: bool) {
+    pub fn set_launcher_autostart(&self, container: &str, entry_id: &str, enabled: bool) {
         let _ = self.commands.send(Command::SetLauncherAutoStart {
             container: container.to_owned(),
             entry_id: entry_id.to_owned(),
@@ -1398,7 +1398,7 @@ impl BridgeSupervisor {
     }
 
     /// `folders.assign` for each path: standalone game folders, not scan roots.
-    pub(crate) fn assign_game_folders(&self, container: &str, paths: &[String]) {
+    pub fn assign_game_folders(&self, container: &str, paths: &[String]) {
         for path in paths {
             let _ = self.commands.send(Command::EditFolders {
                 container: container.to_owned(),
@@ -1411,7 +1411,7 @@ impl BridgeSupervisor {
     }
 
     /// `system.chooseFolders`: multi-select directory picker for scan roots.
-    pub(crate) fn choose_folders(&self, purpose: &str, path: &str) {
+    pub fn choose_folders(&self, purpose: &str, path: &str) {
         let _ = self.commands.send(Command::ChooseFolders {
             purpose: purpose.to_owned(),
             path: path.to_owned(),
@@ -1419,7 +1419,7 @@ impl BridgeSupervisor {
     }
 
     /// `folders.addRoots`: adds every selected directory in one write.
-    pub(crate) fn add_scan_roots(&self, container: &str, paths: &[String]) {
+    pub fn add_scan_roots(&self, container: &str, paths: &[String]) {
         let _ = self.commands.send(Command::AddScanRoots {
             container: container.to_owned(),
             paths: paths.to_vec(),
@@ -1427,7 +1427,7 @@ impl BridgeSupervisor {
     }
 
     /// `folders.moveRoot`: reassign a scanned root to another bottle.
-    pub(crate) fn move_scan_root(&self, source: &str, root: &str, target: &str) {
+    pub fn move_scan_root(&self, source: &str, root: &str, target: &str) {
         let _ = self.commands.send(Command::MoveScanRoot {
             source: source.to_owned(),
             root: root.to_owned(),
@@ -1435,14 +1435,14 @@ impl BridgeSupervisor {
         });
     }
 
-    pub(crate) fn load_candidates(&self, container: &str, folder: &str) {
+    pub fn load_candidates(&self, container: &str, folder: &str) {
         let _ = self.commands.send(Command::LoadCandidates {
             container: container.to_owned(),
             folder: folder.to_owned(),
         });
     }
 
-    pub(crate) fn load_environment(&self, container: &str) {
+    pub fn load_environment(&self, container: &str) {
         let _ = self
             .commands
             .send(Command::LoadEnvironment(container.to_owned()));
@@ -1450,7 +1450,7 @@ impl BridgeSupervisor {
 
     /// `environment.set`. `value: None` removes `key`; `replacing` names an old
     /// key that is removed first, because the bridge has no rename call.
-    pub(crate) fn set_environment(
+    pub fn set_environment(
         &self,
         container: &str,
         key: &str,
@@ -1465,24 +1465,24 @@ impl BridgeSupervisor {
         });
     }
 
-    pub(crate) fn start_scan(&self, container: &str) {
+    pub fn start_scan(&self, container: &str) {
         let _ = self
             .commands
             .send(Command::StartScan(container.to_owned()));
     }
 
-    pub(crate) fn cancel_scan(&self) {
+    pub fn cancel_scan(&self) {
         let _ = self.commands.send(Command::CancelScan);
     }
 
     /// `bottle.create`. The reply is a job handle; progress and the refreshed
     /// catalogue arrive as `BridgeEvent::BottleCreate`.
-    pub(crate) fn create_bottle(&self, name: &str, parent: &str, windows_version: &str) {
+    pub fn create_bottle(&self, name: &str, parent: &str, windows_version: &str) {
         self.create_bottle_with_engine(name, parent, windows_version, "managed");
     }
 
     /// `bottle.create` bound to an explicit `wine.engines` id.
-    pub(crate) fn create_bottle_with_engine(
+    pub fn create_bottle_with_engine(
         &self,
         name: &str,
         parent: &str,
@@ -1498,12 +1498,12 @@ impl BridgeSupervisor {
     }
 
     /// `wine.engines.list`.
-    pub(crate) fn load_wine_engines(&self) {
+    pub fn load_wine_engines(&self) {
         let _ = self.commands.send(Command::LoadWineEngines);
     }
 
     /// `wine.engines.register`.
-    pub(crate) fn register_wine_engine(&self, path: &str, name: Option<&str>) {
+    pub fn register_wine_engine(&self, path: &str, name: Option<&str>) {
         let _ = self.commands.send(Command::RegisterWineEngine {
             path: path.to_owned(),
             name: name.map(str::to_owned),
@@ -1511,19 +1511,19 @@ impl BridgeSupervisor {
     }
 
     /// `wine.engines.remove`.
-    pub(crate) fn remove_wine_engine(&self, id: &str) {
+    pub fn remove_wine_engine(&self, id: &str) {
         let _ = self.commands.send(Command::RemoveWineEngine { id: id.to_owned() });
     }
 
     /// `wine.engines.selection`.
-    pub(crate) fn load_engine_selection(&self, container: &str) {
+    pub fn load_engine_selection(&self, container: &str) {
         let _ = self.commands.send(Command::LoadEngineSelection {
             container: container.to_owned(),
         });
     }
 
     /// `wine.engines.select`.
-    pub(crate) fn select_wine_engine(&self, container: &str, engine_id: &str) {
+    pub fn select_wine_engine(&self, container: &str, engine_id: &str) {
         let _ = self.commands.send(Command::SelectWineEngine {
             container: container.to_owned(),
             engine_id: engine_id.to_owned(),
@@ -1531,7 +1531,7 @@ impl BridgeSupervisor {
     }
 
     /// `wine.engines.setFeatureOverride`.
-    pub(crate) fn set_engine_feature_override(
+    pub fn set_engine_feature_override(
         &self,
         container: &str,
         feature: &str,
@@ -1549,12 +1549,12 @@ impl BridgeSupervisor {
     }
 
     /// `winetricks.catalog`: the bundled verb index, independent of a bottle.
-    pub(crate) fn load_winetricks_catalog(&self) {
+    pub fn load_winetricks_catalog(&self) {
         let _ = self.commands.send(Command::LoadWinetricksCatalog);
     }
 
     /// `winetricks.installed` for one bottle.
-    pub(crate) fn load_installed_winetricks(&self, container: &str) {
+    pub fn load_installed_winetricks(&self, container: &str) {
         let _ = self
             .commands
             .send(Command::LoadInstalledWinetricks(container.to_owned()));
@@ -1562,19 +1562,19 @@ impl BridgeSupervisor {
 
     /// `winetricks.install`: a `BridgeJobStore` job. Progress, the result and
     /// the authoritative post-install verb set arrive as `WinetricksInstall`.
-    pub(crate) fn install_winetricks(&self, container: &str, verbs: &[String]) {
+    pub fn install_winetricks(&self, container: &str, verbs: &[String]) {
         let _ = self.commands.send(Command::InstallWinetricks {
             container: container.to_owned(),
             verbs: verbs.to_vec(),
         });
     }
 
-    pub(crate) fn cancel_winetricks(&self) {
+    pub fn cancel_winetricks(&self) {
         let _ = self.commands.send(Command::CancelWinetricks);
     }
 
     /// `programs.settings.read` for one executable.
-    pub(crate) fn load_program_settings(&self, container: &str, executable: &str) {
+    pub fn load_program_settings(&self, container: &str, executable: &str) {
         let _ = self.commands.send(Command::LoadProgramSettings {
             container: container.to_owned(),
             executable: executable.to_owned(),
@@ -1582,7 +1582,7 @@ impl BridgeSupervisor {
     }
 
     /// `programs.settings.set`; the reply is the same shape as a read.
-    pub(crate) fn save_program_settings(
+    pub fn save_program_settings(
         &self,
         container: &str,
         executable: &str,
@@ -1598,7 +1598,7 @@ impl BridgeSupervisor {
     /// `programs.settings.read` after a run exits. A prompt event only fires
     /// when the latest run failed a display-mode change and the program has
     /// neither the override nor a permanent dismissal on record.
-    pub(crate) fn probe_legacy_fullscreen(
+    pub fn probe_legacy_fullscreen(
         &self,
         container: &str,
         executable: &str,
@@ -1611,14 +1611,14 @@ impl BridgeSupervisor {
         });
     }
 
-    pub(crate) fn load_program_history(&self, container: &str, executable: &str) {
+    pub fn load_program_history(&self, container: &str, executable: &str) {
         let _ = self.commands.send(Command::LoadProgramHistory {
             container: container.to_owned(),
             executable: executable.to_owned(),
         });
     }
 
-    pub(crate) fn delete_program_history(
+    pub fn delete_program_history(
         &self,
         container: &str,
         executable: &str,
@@ -1631,7 +1631,7 @@ impl BridgeSupervisor {
         });
     }
 
-    pub(crate) fn create_program_shortcut(
+    pub fn create_program_shortcut(
         &self,
         container: &str,
         executable: &str,
@@ -1645,7 +1645,7 @@ impl BridgeSupervisor {
     }
 
     /// `entry.move`: re-home a pinned or folder entry in another bottle.
-    pub(crate) fn move_entry(
+    pub fn move_entry(
         &self,
         source_container: &str,
         entry_id: &str,
@@ -1659,7 +1659,7 @@ impl BridgeSupervisor {
     }
 
     /// Run an opened or dropped Windows file in one bottle.
-    pub(crate) fn run_program(&self, container: &str, path: &str, name: &str) {
+    pub fn run_program(&self, container: &str, path: &str, name: &str) {
         let _ = self.commands.send(Command::RunProgram {
             container: container.to_owned(),
             path: path.to_owned(),
@@ -1669,14 +1669,14 @@ impl BridgeSupervisor {
 
     /// `programs.list` for one bottle. The pin/block mutations reply with the
     /// same payload, so one event type carries all three.
-    pub(crate) fn load_programs(&self, container: &str) {
+    pub fn load_programs(&self, container: &str) {
         let _ = self
             .commands
             .send(Command::LoadPrograms(container.to_owned()));
     }
 
     /// `programs.pin`; the reply is the refreshed program list.
-    pub(crate) fn set_program_pinned(&self, container: &str, path: &str, name: &str, pinned: bool) {
+    pub fn set_program_pinned(&self, container: &str, path: &str, name: &str, pinned: bool) {
         let _ = self.commands.send(Command::SetProgramPinned {
             container: container.to_owned(),
             path: path.to_owned(),
@@ -1686,7 +1686,7 @@ impl BridgeSupervisor {
     }
 
     /// `programs.block`; the reply is the refreshed program list.
-    pub(crate) fn set_program_blocked(&self, container: &str, path: &str, blocked: bool) {
+    pub fn set_program_blocked(&self, container: &str, path: &str, blocked: bool) {
         let _ = self.commands.send(Command::SetProgramBlocked {
             container: container.to_owned(),
             path: path.to_owned(),
@@ -1695,14 +1695,14 @@ impl BridgeSupervisor {
     }
 
     /// `processes.list` for one bottle. The Processes page polls this.
-    pub(crate) fn load_processes(&self, container: &str) {
+    pub fn load_processes(&self, container: &str) {
         let _ = self
             .commands
             .send(Command::LoadProcesses(container.to_owned()));
     }
 
     /// `processes.kill` with the default graceful semantics.
-    pub(crate) fn kill_process(&self, container: &str, pid: i64) {
+    pub fn kill_process(&self, container: &str, pid: i64) {
         let _ = self.commands.send(Command::KillProcess {
             container: container.to_owned(),
             pid,
@@ -1710,21 +1710,21 @@ impl BridgeSupervisor {
     }
 
     /// `processes.killAll`: terminates all processes in the container.
-    pub(crate) fn kill_all_processes(&self, container: &str) {
+    pub fn kill_all_processes(&self, container: &str) {
         let _ = self.commands.send(Command::KillAllProcesses(container.to_owned()));
     }
 
-    pub(crate) fn set_active(&self, active: bool) {
+    pub fn set_active(&self, active: bool) {
         let _ = self.commands.send(Command::SetActive(active));
     }
 
     /// Re-read `workspace.containers`; the reply is `ContainersRefreshed`.
-    pub(crate) fn reload_library(&self) {
+    pub fn reload_library(&self) {
         let _ = self.commands.send(Command::ReloadLibrary);
     }
 
     /// Select `path` in Finder (`system.reveal`).
-    pub(crate) fn reveal(&self, container: &str, path: &str) {
+    pub fn reveal(&self, container: &str, path: &str) {
         let _ = self.commands.send(Command::System {
             container: container.to_owned(),
             path: Some(path.to_owned()),
@@ -1733,7 +1733,7 @@ impl BridgeSupervisor {
     }
 
     /// Open `path` with its default application (`system.open`).
-    pub(crate) fn open(&self, container: &str, path: &str) {
+    pub fn open(&self, container: &str, path: &str) {
         let _ = self.commands.send(Command::System {
             container: container.to_owned(),
             path: Some(path.to_owned()),
@@ -1742,13 +1742,13 @@ impl BridgeSupervisor {
     }
 
     /// Native directory picker (`system.chooseFolder`).
-    pub(crate) fn choose_folder(&self, path: &str) {
+    pub fn choose_folder(&self, path: &str) {
         let _ = self.commands.send(Command::ChooseFolder(path.to_owned()));
     }
 
     /// One bottle lifecycle mutation. The event carries the helper's own
     /// result; a job-backed operation reports `Started` first.
-    pub(crate) fn bottle_operation(
+    pub fn bottle_operation(
         &self,
         operation: BottleOperation,
         container: &str,
@@ -1766,7 +1766,7 @@ impl BridgeSupervisor {
     }
 
     /// `bottle.tools`: winecfg, regedit, control or a terminal session.
-    pub(crate) fn open_bottle_tool(&self, container: &str, tool: &str) {
+    pub fn open_bottle_tool(&self, container: &str, tool: &str) {
         let _ = self.commands.send(Command::OpenBottleTool {
             container: container.to_owned(),
             tool: tool.to_owned(),
@@ -1774,14 +1774,14 @@ impl BridgeSupervisor {
     }
 
     /// `bottle.diagnostics`: a job whose report arrives as `Diagnostics`.
-    pub(crate) fn load_diagnostics(&self, container: &str) {
+    pub fn load_diagnostics(&self, container: &str) {
         let _ = self.commands.send(Command::LoadDiagnostics {
             container: container.to_owned(),
         });
     }
 
     /// `bottle.exportDiagnostics`: writes the report to `destination`.
-    pub(crate) fn export_diagnostics(&self, container: &str, destination: &str) {
+    pub fn export_diagnostics(&self, container: &str, destination: &str) {
         let _ = self.commands.send(Command::ExportDiagnostics {
             container: container.to_owned(),
             destination: destination.to_owned(),
@@ -1789,14 +1789,14 @@ impl BridgeSupervisor {
     }
 
     /// `bottle.checks`: curated preflight checks for the troubleshooting sheet.
-    pub(crate) fn run_bottle_checks(&self, container: &str) {
+    pub fn run_bottle_checks(&self, container: &str) {
         let _ = self.commands.send(Command::RunBottleChecks {
             container: container.to_owned(),
         });
     }
 
     /// `audio.test`: the Wine stack probe; `beep` plays the 440 Hz tone.
-    pub(crate) fn test_audio(&self, container: &str, beep: bool) {
+    pub fn test_audio(&self, container: &str, beep: bool) {
         let _ = self.commands.send(Command::TestAudio {
             container: container.to_owned(),
             beep,
@@ -1804,7 +1804,7 @@ impl BridgeSupervisor {
     }
 
     /// `metadata.search`: network providers, answered by a job.
-    pub(crate) fn search_metadata(
+    pub fn search_metadata(
         &self,
         container: &str,
         entry_id: &str,
@@ -1825,7 +1825,7 @@ impl BridgeSupervisor {
 
     /// Read/save the per-game draft, or refresh its persisted platform IDs.
     /// The generation prevents a late reply from replacing a reopened editor.
-    pub(crate) fn metadata_record(
+    pub fn metadata_record(
         &self,
         container: &str,
         entry_id: &str,
@@ -1845,7 +1845,7 @@ impl BridgeSupervisor {
     }
 
     /// Store one provider snapshot as the entry's metadata.
-    pub(crate) fn apply_metadata(
+    pub fn apply_metadata(
         &self,
         container: &str,
         entry_id: &str,
@@ -1858,14 +1858,14 @@ impl BridgeSupervisor {
         });
     }
 
-    pub(crate) fn clear_metadata(&self, container: &str, entry_id: &str) {
+    pub fn clear_metadata(&self, container: &str, entry_id: &str) {
         let _ = self.commands.send(Command::ClearMetadata {
             container: container.to_owned(),
             entry_id: entry_id.to_owned(),
         });
     }
 
-    pub(crate) fn import_metadata_cover(&self, container: &str, entry_id: &str, path: &str) {
+    pub fn import_metadata_cover(&self, container: &str, entry_id: &str, path: &str) {
         let _ = self.commands.send(Command::ImportMetadataCover {
             container: container.to_owned(),
             entry_id: entry_id.to_owned(),
@@ -1873,49 +1873,49 @@ impl BridgeSupervisor {
         });
     }
 
-    pub(crate) fn reset_metadata_cover(&self, container: &str, entry_id: &str) {
+    pub fn reset_metadata_cover(&self, container: &str, entry_id: &str) {
         let _ = self.commands.send(Command::ResetMetadataCover {
             container: container.to_owned(),
             entry_id: entry_id.to_owned(),
         });
     }
 
-    pub(crate) fn load_setup_status(&self) {
+    pub fn load_setup_status(&self) {
         let _ = self.commands.send(Command::LoadSetupStatus);
     }
 
-    pub(crate) fn load_gptk_status(&self) {
+    pub fn load_gptk_status(&self) {
         let _ = self.commands.send(Command::LoadGptkStatus);
     }
 
-    pub(crate) fn import_gptk(&self, path: &str) {
+    pub fn import_gptk(&self, path: &str) {
         let _ = self.commands.send(Command::ImportGptk {
             path: path.to_owned(),
         });
     }
 
-    pub(crate) fn remove_gptk(&self) {
+    pub fn remove_gptk(&self) {
         let _ = self.commands.send(Command::RemoveGptk);
     }
 
     /// `setup.install`: a job that downloads and installs the Wine runtime.
-    pub(crate) fn install_setup(&self) {
+    pub fn install_setup(&self) {
         let _ = self.commands.send(Command::InstallSetup);
     }
 
     /// `setup.installRosetta`: installs Rosetta 2 on Apple Silicon.
-    pub(crate) fn install_rosetta(&self) {
+    pub fn install_rosetta(&self) {
         let _ = self.commands.send(Command::InstallRosetta);
     }
 
     /// `setup.checkUpdate`: compares the installed runtime against the
     /// published manifest. Silent when the shared update-check default is off.
-    pub(crate) fn check_wine_update(&self) {
+    pub fn check_wine_update(&self) {
         let _ = self.commands.send(Command::CheckWineUpdate);
     }
 
     /// `metadata.sync`: automatic matching for folder entries.
-    pub(crate) fn sync_metadata(&self, container: &str, sources: Vec<String>, automatic: bool, include_characters: bool) {
+    pub fn sync_metadata(&self, container: &str, sources: Vec<String>, automatic: bool, include_characters: bool) {
         let _ = self.commands.send(Command::SyncMetadata {
             container: container.to_owned(),
             sources,
@@ -1925,14 +1925,14 @@ impl BridgeSupervisor {
     }
 
     /// `gameConfig.match`: the local database, so it is answered directly.
-    pub(crate) fn match_game_config(&self, container: &str, entry_id: &str) {
+    pub fn match_game_config(&self, container: &str, entry_id: &str) {
         let _ = self.commands.send(Command::MatchGameConfig {
             container: container.to_owned(),
             entry_id: entry_id.to_owned(),
         });
     }
 
-    pub(crate) fn apply_game_config(
+    pub fn apply_game_config(
         &self,
         container: &str,
         entry_id: &str,
@@ -1947,16 +1947,16 @@ impl BridgeSupervisor {
         });
     }
 
-    pub(crate) fn discover_containers(&self, request: u64, root: Option<String>) {
+    pub fn discover_containers(&self, request: u64, root: Option<String>) {
         let _ = self.commands.send(Command::DiscoverContainers { request, root });
     }
-    pub(crate) fn import_candidates(&self, request: u64, candidates: Vec<crate::container_import::Candidate>) {
+    pub fn import_candidates(&self, request: u64, candidates: Vec<crate::container_import::Candidate>) {
         let _ = self.commands.send(Command::ImportCandidates { request, candidates });
     }
 
     /// `system.choosePath`: file, folder or save panels. `purpose` comes back
     /// on `BridgeEvent::PathChosen`.
-    pub(crate) fn choose_path(
+    pub fn choose_path(
         &self,
         purpose: &str,
         mode: &str,
@@ -6933,20 +6933,20 @@ fn emit_event(events: &smol::channel::Sender<BridgeEvent>, event: BridgeEvent) {
 
 /// A remote error leaves the session usable; anything else ends it.
 #[derive(Debug, PartialEq, Eq)]
-pub(crate) enum CallFailure {
+pub enum CallFailure {
     Remote(String),
     Session(String),
 }
 
 impl CallFailure {
-    pub(crate) fn into_message(self) -> String {
+    pub fn into_message(self) -> String {
         match self {
             Self::Remote(message) | Self::Session(message) => message,
         }
     }
 }
 
-pub(crate) fn classify(error: whisky_bridge::Error) -> CallFailure {
+pub fn classify(error: whisky_bridge::Error) -> CallFailure {
     match error {
         whisky_bridge::Error::Remote(error) => {
             CallFailure::Remote(crate::i18n::bridge_errors::describe(&error.code, &error.message))
@@ -7098,14 +7098,14 @@ fn log_container_names(containers: &[Container]) {    let names = containers
 
 
 /// Pure capped exponential backoff formula: 500 ms, 1 s, 2 s, 4 s, then 8 s.
-pub(crate) fn backoff_delay_formula(attempt: u32) -> Duration {
+pub fn backoff_delay_formula(attempt: u32) -> Duration {
     let exponent = attempt.min(4);
     let millis = BACKOFF_MIN_MS.saturating_mul(1_u64 << exponent);
     Duration::from_millis(millis.min(BACKOFF_MAX_MS))
 }
 
 /// Capped exponential backoff: 500 ms, 1 s, 2 s, 4 s, then 8 s.
-pub(crate) fn backoff_delay(attempt: u32) -> Duration {
+pub fn backoff_delay(attempt: u32) -> Duration {
     backoff_delay_formula(attempt)
 }
 
@@ -7152,7 +7152,7 @@ fn helper_arguments() -> Vec<String> {
 
 /// Resolve the helper in the documented order. Every candidate is checked with
 /// `is_file`; no failure path panics.
-pub(crate) fn locate_helper() -> Result<PathBuf, String> {
+pub fn locate_helper() -> Result<PathBuf, String> {
     if let Some(raw) = std::env::var_os("WHISKY_BRIDGE_HELPER") {
         let path = PathBuf::from(raw);
         if !path.is_absolute() {
@@ -7213,7 +7213,7 @@ fn repository_root() -> Option<PathBuf> {
 
 /// `--print-bridge-status`: connect, validate, print the describe payload, and
 /// report success through the process exit code.
-pub(crate) fn print_status() -> i32 {
+pub fn print_status() -> i32 {
     let helper = match locate_helper() {
         Ok(helper) => helper,
         Err(reason) => {
@@ -7262,7 +7262,7 @@ pub(crate) fn print_status() -> i32 {
 /// `--print-runtime`: connect, check the runtime allow-list, read one
 /// `runtime.snapshot`, and print it as JSON. Safe with no game running: the
 /// payload only reports the configured entries and the event cursor.
-pub(crate) fn print_runtime() -> i32 {
+pub fn print_runtime() -> i32 {
     let helper = match locate_helper() {
         Ok(helper) => helper,
         Err(reason) => {
@@ -7344,7 +7344,7 @@ const WATCH_INTERVAL: Duration = Duration::from_millis(500);
 /// Observation only. Nothing here calls `runtime.launch`, so no game and no
 /// Steam client can start; the command exists to prove the cursor moves and the
 /// snapshot shape matches what the UI stores.
-pub(crate) fn watch_runtime(bottle: Option<&str>, seconds: u64) -> i32 {
+pub fn watch_runtime(bottle: Option<&str>, seconds: u64) -> i32 {
     let helper = match locate_helper() {
         Ok(helper) => helper,
         Err(reason) => {
@@ -7533,7 +7533,7 @@ struct BottleSummary {
 /// `--print-library [--bottle <name-or-path>] [--all]`: read-only, no window.
 /// Prints containers and their entry counts as JSON; failures go to stderr.
 /// `all` merges every bottle and adds the total plus per-bottle counts.
-pub(crate) fn print_library(bottle: Option<&str>, all: bool) -> i32 {
+pub fn print_library(bottle: Option<&str>, all: bool) -> i32 {
     let helper = match locate_helper() {
         Ok(helper) => helper,
         Err(reason) => {
@@ -7637,7 +7637,7 @@ pub(crate) fn print_library(bottle: Option<&str>, all: bool) -> i32 {
 /// `--print-config [--bottle <name-or-path>]`: read the schema and the stored
 /// values, then print the field count, the kind histogram and three samples as
 /// JSON. Read-only: it never calls `configuration.set` or a scan.
-pub(crate) fn print_config(bottle: Option<&str>) -> i32 {
+pub fn print_config(bottle: Option<&str>) -> i32 {
     let helper = match locate_helper() {
         Ok(helper) => helper,
         Err(reason) => {
@@ -7745,7 +7745,7 @@ pub(crate) fn print_config(bottle: Option<&str>) -> i32 {
 
 /// `--print-folders [--bottle <name-or-path>]`: roots with their assignment,
 /// exclusion and executable, plus every list the helper stores. Read-only.
-pub(crate) fn print_folders(bottle: Option<&str>) -> i32 {
+pub fn print_folders(bottle: Option<&str>) -> i32 {
     let helper = match locate_helper() {
         Ok(helper) => helper,
         Err(reason) => {
@@ -7838,7 +7838,7 @@ pub(crate) fn print_folders(bottle: Option<&str>) -> i32 {
 
 /// `--print-winetricks [--bottle <name-or-path>]`: the bundled catalog
 /// categories and one bottle's installed verbs. Read-only.
-pub(crate) fn print_winetricks(bottle: Option<&str>) -> i32 {
+pub fn print_winetricks(bottle: Option<&str>) -> i32 {
     let helper = match locate_helper() {
         Ok(helper) => helper,
         Err(reason) => {
@@ -7945,7 +7945,7 @@ pub(crate) fn print_winetricks(bottle: Option<&str>) -> i32 {
 /// `--print-programs [--bottle <name-or-path>]`: the bottle's installed
 /// programs with their pin/block state, as counts plus a five-row sample.
 /// Read-only: it never calls `programs.pin` or `programs.block`.
-pub(crate) fn print_programs(bottle: Option<&str>) -> i32 {
+pub fn print_programs(bottle: Option<&str>) -> i32 {
     let helper = match locate_helper() {
         Ok(helper) => helper,
         Err(reason) => {
@@ -8042,7 +8042,7 @@ const BOGUS_PID: i64 = 2_147_483_647;
 /// snapshot plus a `processes.kill` probe against [`BOGUS_PID`]. Observation
 /// only: no game is launched and nothing real is ever signalled. An empty
 /// list is a legitimate answer and still exits 0.
-pub(crate) fn print_processes(bottle: Option<&str>) -> i32 {
+pub fn print_processes(bottle: Option<&str>) -> i32 {
     let helper = match locate_helper() {
         Ok(helper) => helper,
         Err(reason) => {
@@ -8163,7 +8163,7 @@ fn decode_capabilities(bits: i64) -> Vec<&'static str> {
 /// the derived `PrimaryAction`, and both helper-side gates (`configured` and
 /// the `.launch` capability). Nothing here calls `runtime.launch`, so no game
 /// and no Steam client can start.
-pub(crate) fn diagnose_launch(bottle: Option<&str>, entry: Option<&str>) -> i32 {
+pub fn diagnose_launch(bottle: Option<&str>, entry: Option<&str>) -> i32 {
     let helper = match locate_helper() {
         Ok(helper) => helper,
         Err(reason) => {

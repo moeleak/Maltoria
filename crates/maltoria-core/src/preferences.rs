@@ -21,7 +21,7 @@
 /// The presentations, in `LibraryDisplayMode` declaration order plus the
 /// GPUI-only modes, which the SwiftUI enum has no case for (the bridge stores
 /// any string and SwiftUI falls back to covers for them).
-pub(crate) const MODE_VALUES: [&str; 6] = [
+pub const MODE_VALUES: [&str; 6] = [
     "covers",
     "timeline",
     "classic",
@@ -31,12 +31,12 @@ pub(crate) const MODE_VALUES: [&str; 6] = [
 ];
 /// The staggered two-column timeline's mode index. It shares the 列表 picker
 /// entry — the toolbar's column toggle moves between it and mode 1.
-pub(crate) const STAGGERED_MODE: usize = 5;
+pub const STAGGERED_MODE: usize = 5;
 /// The picker's parent mode for a hidden timeline variant.
-pub(crate) fn picker_mode(mode: usize) -> usize {
+pub fn picker_mode(mode: usize) -> usize {
     if mode == STAGGERED_MODE { 1 } else { mode }
 }
-pub(crate) fn visible_modes() -> [(usize, &'static str, &'static str, &'static str); 4] {
+pub fn visible_modes() -> [(usize, &'static str, &'static str, &'static str); 4] {
     let s = &crate::i18n::s().settings;
     [
         (0, "library-big", s.mode_grid, s.mode_grid_desc),
@@ -45,27 +45,30 @@ pub(crate) fn visible_modes() -> [(usize, &'static str, &'static str, &'static s
         (4, "panel-left", s.mode_gallery, s.mode_gallery_desc),
     ]
 }
-#[cfg(test)]
-pub(crate) const VISIBLE_MODES: [(usize, &str, &str, &str); 4] = [
+#[cfg(any(test, feature = "test-support"))]
+pub const VISIBLE_MODES: [(usize, &str, &str, &str); 4] = [
     (0, "library-big", "网格", "紧凑排列，快速浏览全部封面"),
     (1, "rows-3", "列表", "按行查看游戏与游玩记录"),
     (3, "tv-minimal-play", "沉浸", "大幅精选画面与分类游戏架"),
     (4, "panel-left", "画廊", "封面墙与游戏详情并排呈现"),
 ];
 /// `LibrarySort` raw values (`WhiskyCore/LibraryOrdering.swift:21`).
-pub(crate) const SORT_VALUES: [&str; 3] = ["recent", "name", "bottle"];
+pub const SORT_VALUES: [&str; 3] = ["recent", "name", "bottle"];
 /// `TerminalApp` raw values (`WhiskyKit/Utils/TerminalApp.swift`).
 #[cfg(not(target_os = "linux"))]
-pub(crate) const TERMINAL_VALUES: [&str; 3] = ["terminal", "iterm", "warp"];
+pub const TERMINAL_VALUES: [&str; 3] = ["terminal", "iterm", "warp"];
 #[cfg(target_os = "linux")]
-pub(crate) const TERMINAL_VALUES: [&str; 5] =
+pub const TERMINAL_VALUES: [&str; 5] =
     ["auto", "x-terminal-emulator", "gnome-terminal", "xterm", "foot"];
 /// `libraryCoverFillStyle` tags (`SettingsView.swift:92`).
-pub(crate) const COVER_FILL_VALUES: [&str; 2] = ["blurred", "theme"];
+pub const COVER_FILL_VALUES: [&str; 2] = ["blurred", "theme"];
 /// `LibraryDetailLayoutStyle` raw values (`LibraryGameSheet.swift:25`).
-pub(crate) const DETAIL_LAYOUT_VALUES: [&str; 2] = ["hero", "split"];
+pub const DETAIL_LAYOUT_VALUES: [&str; 2] = ["hero", "split"];
 /// Backdrop blur level names, indexed by the `libraryBackdropBlur` level.
-pub(crate) fn backdrop_blur_names() -> [&'static str; crate::artwork::BLUR_LEVELS as usize] {
+/// The backdrop blur levels the immersive presentation offers, off included.
+pub const BLUR_LEVELS: u8 = 5;
+
+pub fn backdrop_blur_names() -> [&'static str; BLUR_LEVELS as usize] {
     let s = &crate::i18n::s().settings;
     [
         s.blur_sharp,
@@ -76,116 +79,116 @@ pub(crate) fn backdrop_blur_names() -> [&'static str; crate::artwork::BLUR_LEVEL
     ]
 }
 
-pub(crate) const DISPLAY_MODE: &str = "libraryDisplayMode";
-pub(crate) const SHOW_HIDDEN: &str = "libraryShowHiddenGames";
-pub(crate) const SORT: &str = "librarySort";
-pub(crate) const SINGLE_LINE_TITLES: &str = "librarySingleLineTitles";
-pub(crate) const MIXED_COVER_LAYOUT: &str = "libraryMixedCoverLayout";
-pub(crate) const COVER_WIDTH: &str = "libraryCoverWidth";
+pub const DISPLAY_MODE: &str = "libraryDisplayMode";
+pub const SHOW_HIDDEN: &str = "libraryShowHiddenGames";
+pub const SORT: &str = "librarySort";
+pub const SINGLE_LINE_TITLES: &str = "librarySingleLineTitles";
+pub const MIXED_COVER_LAYOUT: &str = "libraryMixedCoverLayout";
+pub const COVER_WIDTH: &str = "libraryCoverWidth";
 /// Cover upscaling factor: `off`, `x2` or `x4` (see `upscale::Factor`).
-pub(crate) const COVER_UPSCALE: &str = "libraryCoverUpscale";
+pub const COVER_UPSCALE: &str = "libraryCoverUpscale";
 /// Cover upscaling engine: `anime4k`, `realcugan` or Linux `realcugan-cpu`.
-pub(crate) const COVER_UPSCALE_ENGINE: &str = "libraryCoverUpscaleEngine";
-pub(crate) const REFRESH_AFTER_EXIT: &str = "libraryRefreshAfterExit";
-pub(crate) const DETAIL_BLURRED_BACKGROUND: &str = "libraryDetailBlurredBackground";
-pub(crate) const CENTER_WIDE_COVER_TEXT: &str = "libraryCenterWideCoverText";
-pub(crate) const BLURRED_COVER_FILL: &str = "libraryBlurredCoverFill";
-pub(crate) const SCRAPE_CHARACTERS: &str = "libraryMetadataScrapeCharacters";
-pub(crate) const COVER_FILL_STYLE: &str = "libraryCoverFillStyle";
-pub(crate) const DETAIL_LAYOUT_STYLE: &str = "libraryDetailLayoutStyle";
+pub const COVER_UPSCALE_ENGINE: &str = "libraryCoverUpscaleEngine";
+pub const REFRESH_AFTER_EXIT: &str = "libraryRefreshAfterExit";
+pub const DETAIL_BLURRED_BACKGROUND: &str = "libraryDetailBlurredBackground";
+pub const CENTER_WIDE_COVER_TEXT: &str = "libraryCenterWideCoverText";
+pub const BLURRED_COVER_FILL: &str = "libraryBlurredCoverFill";
+pub const SCRAPE_CHARACTERS: &str = "libraryMetadataScrapeCharacters";
+pub const COVER_FILL_STYLE: &str = "libraryCoverFillStyle";
+pub const DETAIL_LAYOUT_STYLE: &str = "libraryDetailLayoutStyle";
 #[cfg(not(target_os = "linux"))]
-pub(crate) const PREFERRED_TERMINAL: &str = "preferredTerminal";
+pub const PREFERRED_TERMINAL: &str = "preferredTerminal";
 #[cfg(target_os = "linux")]
-pub(crate) const PREFERRED_TERMINAL: &str = "preferredLinuxTerminal";
-pub(crate) const KILL_ON_TERMINATE: &str = "killOnTerminate";
-pub(crate) const SHOW_MENU_BAR_EXTRA: &str = "showMenuBarExtra";
-pub(crate) const OFFLINE_MODE: &str = "offlineMode";
-pub(crate) const CHECK_UPDATES: &str = "checkWhiskyWineUpdates";
-pub(crate) const DEFAULT_BOTTLE_LOCATION: &str = "defaultBottleLocation";
+pub const PREFERRED_TERMINAL: &str = "preferredLinuxTerminal";
+pub const KILL_ON_TERMINATE: &str = "killOnTerminate";
+pub const SHOW_MENU_BAR_EXTRA: &str = "showMenuBarExtra";
+pub const OFFLINE_MODE: &str = "offlineMode";
+pub const CHECK_UPDATES: &str = "checkWhiskyWineUpdates";
+pub const DEFAULT_BOTTLE_LOCATION: &str = "defaultBottleLocation";
 /// The library sidebar's presentation; GPUI-only like `libraryCoverWidth`.
-pub(crate) const SIDEBAR_MODE: &str = "librarySidebarMode";
+pub const SIDEBAR_MODE: &str = "librarySidebarMode";
 /// Which collapsed presentation (`icons` or `hidden`) the collapse action
 /// and `ToggleSidebar` use; remembered across launches.
-pub(crate) const SIDEBAR_COLLAPSED_STYLE: &str = "librarySidebarCollapsedStyle";
+pub const SIDEBAR_COLLAPSED_STYLE: &str = "librarySidebarCollapsedStyle";
 /// Whether the ambient backdrop fills the window with the hovered artwork.
 /// GPUI-only like `libraryCoverWidth`.
-pub(crate) const BACKDROP_FILL: &str = "libraryBackdropFill";
+pub const BACKDROP_FILL: &str = "libraryBackdropFill";
 /// Backdrop blur level: 0 draws the sharp image, `artwork::BLUR_LEVELS - 1`
 /// the heaviest. GPUI-only like `libraryCoverWidth`.
-pub(crate) const BACKDROP_BLUR: &str = "libraryBackdropBlur";
+pub const BACKDROP_BLUR: &str = "libraryBackdropBlur";
 
 /// SwiftUI defaults, used before the bridge answers and for keys the bridge
 /// does not expose.
-pub(crate) const DEFAULT_MODE: &str = "covers";
-pub(crate) const DEFAULT_SORT: &str = "recent";
-pub(crate) const DEFAULT_SHOW_HIDDEN: bool = false;
-pub(crate) const DEFAULT_SINGLE_LINE_TITLES: bool = false;
-pub(crate) const DEFAULT_MIXED_COVER_LAYOUT: bool = true;
+pub const DEFAULT_MODE: &str = "covers";
+pub const DEFAULT_SORT: &str = "recent";
+pub const DEFAULT_SHOW_HIDDEN: bool = false;
+pub const DEFAULT_SINGLE_LINE_TITLES: bool = false;
+pub const DEFAULT_MIXED_COVER_LAYOUT: bool = true;
 /// Zero is the automatic shelf: covers divide the row, as before the control.
-pub(crate) const DEFAULT_COVER_WIDTH: f32 = crate::library_layout::AUTOMATIC_COVER_WIDTH;
+pub const DEFAULT_COVER_WIDTH: f32 = crate::library_layout::AUTOMATIC_COVER_WIDTH;
 /// Covers are upscaled only when asked for: the pass costs a GPU burst and a
 /// cached PNG per cover.
-pub(crate) const DEFAULT_COVER_UPSCALE: &str = "off";
+pub const DEFAULT_COVER_UPSCALE: &str = "off";
 /// Real-CUGAN has the better line work for cover art; the app falls back to
 /// Anime4K on macOS, or CPU inference on Linux, if acceleration fails.
-pub(crate) const DEFAULT_COVER_UPSCALE_ENGINE: &str = "realcugan";
-pub(crate) const DEFAULT_REFRESH_AFTER_EXIT: bool = true;
-pub(crate) const DEFAULT_DETAIL_BLURRED_BACKGROUND: bool = true;
-pub(crate) const DEFAULT_CENTER_WIDE_COVER_TEXT: bool = false;
-pub(crate) const DEFAULT_BLURRED_COVER_FILL: bool = true;
-pub(crate) const DEFAULT_SCRAPE_CHARACTERS: bool = true;
-pub(crate) const DEFAULT_COVER_FILL_STYLE: &str = "blurred";
-pub(crate) const DEFAULT_DETAIL_LAYOUT_STYLE: &str = "hero";
+pub const DEFAULT_COVER_UPSCALE_ENGINE: &str = "realcugan";
+pub const DEFAULT_REFRESH_AFTER_EXIT: bool = true;
+pub const DEFAULT_DETAIL_BLURRED_BACKGROUND: bool = true;
+pub const DEFAULT_CENTER_WIDE_COVER_TEXT: bool = false;
+pub const DEFAULT_BLURRED_COVER_FILL: bool = true;
+pub const DEFAULT_SCRAPE_CHARACTERS: bool = true;
+pub const DEFAULT_COVER_FILL_STYLE: &str = "blurred";
+pub const DEFAULT_DETAIL_LAYOUT_STYLE: &str = "hero";
 #[cfg(not(target_os = "linux"))]
-pub(crate) const DEFAULT_PREFERRED_TERMINAL: &str = "terminal";
+pub const DEFAULT_PREFERRED_TERMINAL: &str = "terminal";
 #[cfg(target_os = "linux")]
-pub(crate) const DEFAULT_PREFERRED_TERMINAL: &str = "auto";
-pub(crate) const DEFAULT_KILL_ON_TERMINATE: bool = true;
-pub(crate) const DEFAULT_SHOW_MENU_BAR_EXTRA: bool = false;
-pub(crate) const DEFAULT_OFFLINE_MODE: bool = false;
-pub(crate) const DEFAULT_CHECK_UPDATES: bool = true;
-pub(crate) const DEFAULT_BACKDROP_FILL: bool = true;
+pub const DEFAULT_PREFERRED_TERMINAL: &str = "auto";
+pub const DEFAULT_KILL_ON_TERMINATE: bool = true;
+pub const DEFAULT_SHOW_MENU_BAR_EXTRA: bool = false;
+pub const DEFAULT_OFFLINE_MODE: bool = false;
+pub const DEFAULT_CHECK_UPDATES: bool = true;
+pub const DEFAULT_BACKDROP_FILL: bool = true;
 /// Mid-range: text stays legible while the art still reads as art.
-pub(crate) const DEFAULT_BACKDROP_BLUR: u8 = 2;
+pub const DEFAULT_BACKDROP_BLUR: u8 = 2;
 
 /// Index of a `LibraryDisplayMode` raw value; unknown values keep the default.
-pub(crate) fn mode_index(raw: &str) -> Option<usize> {
+pub fn mode_index(raw: &str) -> Option<usize> {
     MODE_VALUES.iter().position(|value| *value == raw)
 }
 
 /// Classic remains a shared SwiftUI preference, but is hidden in GPUI.
 /// "immersive" is GPUI-only and stays visible.
-pub(crate) fn visible_mode_index(raw: &str) -> Option<usize> {
+pub fn visible_mode_index(raw: &str) -> Option<usize> {
     mode_index(raw).map(|index| if index == 2 { 0 } else { index })
 }
 
 /// Index of a `LibrarySort` raw value.
-pub(crate) fn sort_index(raw: &str) -> Option<usize> {
+pub fn sort_index(raw: &str) -> Option<usize> {
     SORT_VALUES.iter().position(|value| *value == raw)
 }
 
 /// The persisted value for a presentation index.
-pub(crate) fn mode_value(index: usize) -> &'static str {
+pub fn mode_value(index: usize) -> &'static str {
     MODE_VALUES.get(index).copied().unwrap_or(DEFAULT_MODE)
 }
 
 /// The persisted value for a sort index.
-pub(crate) fn sort_value(index: usize) -> &'static str {
+pub fn sort_value(index: usize) -> &'static str {
     SORT_VALUES.get(index).copied().unwrap_or(DEFAULT_SORT)
 }
 
 /// Whether `raw` is one of the accepted terminal raw values.
-pub(crate) fn terminal_index(raw: &str) -> Option<usize> {
+pub fn terminal_index(raw: &str) -> Option<usize> {
     TERMINAL_VALUES.iter().position(|value| *value == raw)
 }
 
 /// Whether `raw` is one of the accepted cover fill tags.
-pub(crate) fn cover_fill_index(raw: &str) -> Option<usize> {
+pub fn cover_fill_index(raw: &str) -> Option<usize> {
     COVER_FILL_VALUES.iter().position(|value| *value == raw)
 }
 
 /// Whether `raw` is one of the accepted detail layouts.
-pub(crate) fn detail_layout_index(raw: &str) -> Option<usize> {
+pub fn detail_layout_index(raw: &str) -> Option<usize> {
     DETAIL_LAYOUT_VALUES.iter().position(|value| *value == raw)
 }
 

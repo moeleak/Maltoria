@@ -1,0 +1,22 @@
+[package]
+name = "maltoria-core"
+version = "0.1.0"
+edition = "2024"
+publish = false
+license = "GPL-3.0-or-later"
+description = "Maltoria's GUI-independent core: the helper bridge, library model and localized strings"
+
+[dependencies]
+chrono = "=0.4.45"
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = "=1.0.154"
+sha2 = "=0.10.9"
+smol = "=2.0.2"
+whisky-bridge = { path = "../whisky-bridge" }
+
+[build-dependencies]
+toml = "=1.1.8"
+
+[features]
+# Bridge supervisors that record or drop commands, for the apps' tests.
+test-support = []

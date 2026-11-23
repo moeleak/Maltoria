@@ -6,67 +6,67 @@
 use std::path::PathBuf;
 use std::sync::OnceLock;
 
-pub(crate) use crate::bridge::dto::CharacterDto as Character;
+pub use crate::bridge::dto::CharacterDto as Character;
 
 #[derive(Clone, Debug)]
-pub(crate) struct Game {
-    pub(crate) metadata: Option<crate::bridge::dto::MetadataDto>,
-    pub(crate) character_images: std::collections::BTreeMap<String, String>,
+pub struct Game {
+    pub metadata: Option<crate::bridge::dto::MetadataDto>,
+    pub character_images: std::collections::BTreeMap<String, String>,
     /// Bridge entry identity (`steam:…` or `pinned:…`); `demo:N` for the demo.
-    pub(crate) id: String,
+    pub id: String,
     /// Existing artwork file, or `None` to use the placeholder treatment.
-    pub(crate) art: Option<PathBuf>,
-    pub(crate) title: String,
+    pub art: Option<PathBuf>,
+    pub title: String,
     /// Developer from `GameMetadata.developer`; the bridge exposes no publisher.
-    pub(crate) studio: Option<String>,
-    pub(crate) description: Option<String>,
-    pub(crate) characters: Vec<Character>,
-    pub(crate) metadata_sources: std::collections::BTreeMap<String, String>,
+    pub studio: Option<String>,
+    pub description: Option<String>,
+    pub characters: Vec<Character>,
+    pub metadata_sources: std::collections::BTreeMap<String, String>,
     /// Release date as the bridge reports it (`YYYY-MM-DD`).
-    pub(crate) release: Option<String>,
-    pub(crate) landscape: bool,
+    pub release: Option<String>,
+    pub landscape: bool,
     /// One-based bottle slot, matching the sidebar (`0` means no bottle).
-    pub(crate) bottle: usize,
+    pub bottle: usize,
     /// Hidden by the container's visibility file.
-    pub(crate) hidden: bool,
-    pub(crate) rating: Option<u8>,
+    pub hidden: bool,
+    pub rating: Option<u8>,
     /// Whole seconds of recorded play time, if any.
-    pub(crate) play_time: Option<u64>,
-    pub(crate) daily_play_time: std::collections::BTreeMap<String, f64>,
+    pub play_time: Option<u64>,
+    pub daily_play_time: std::collections::BTreeMap<String, f64>,
     /// Unix seconds, if the bridge recorded a session.
-    pub(crate) last_played: Option<u64>,
+    pub last_played: Option<u64>,
     /// Launching executable, when the entry is a program rather than a Store app.
     /// A folder entry holds its chosen executable here once selected.
-    pub(crate) executable: Option<PathBuf>,
+    pub executable: Option<PathBuf>,
     /// The folder path for folder entries, preserved even when an executable is chosen.
-    pub(crate) folder_path: Option<PathBuf>,
+    pub folder_path: Option<PathBuf>,
     /// Installation root supplied by the catalogue, including Steam libraries.
-    pub(crate) game_directory: Option<PathBuf>,
+    pub game_directory: Option<PathBuf>,
     /// A scanned folder rather than a pinned file or a Steam app. Its
     /// executable is a choice the user makes, so the card offers one.
-    pub(crate) is_folder: bool,
+    pub is_folder: bool,
     /// A folder entry that has no executable chosen yet: Play must ask for one.
-    pub(crate) needs_executable: bool,
+    pub needs_executable: bool,
     /// Absolute path of the bottle this entry was read from. Entries are keyed
     /// internally by `(container, id)`, so a game installed in two bottles
     /// stays two records even when the grid shows one card.
-    pub(crate) container: String,
+    pub container: String,
     /// `GameActivity.lastSessionEndedAt`; the Swift `recent` sort key.
-    pub(crate) last_session_ended_at: Option<u64>,
+    pub last_session_ended_at: Option<u64>,
     /// A storefront client (Steam etc.) rather than a game; grouped below the
     /// games unless the timeline presentation is active (`isLauncher`).
-    pub(crate) is_launcher: bool,
+    pub is_launcher: bool,
     /// `LibraryEntry.metadataIdentity` — the stable per-bottle key launcher
     /// auto-start preferences persist under.
-    pub(crate) identity: String,
+    pub identity: String,
     /// Per-entry user custom tags.
-    pub(crate) tags: Vec<String>,
+    pub tags: Vec<String>,
     /// Whether this work exposes multiple selectable `.exe` launch entries.
-    pub(crate) multi_executable: bool,
+    pub multi_executable: bool,
     /// Selected launch `.exe` paths for multi-exe mode.
-    pub(crate) launch_executables: Vec<String>,
+    pub launch_executables: Vec<String>,
     /// Most recently launched `.exe` path in multi-exe mode.
-    pub(crate) last_executable: Option<String>,
+    pub last_executable: Option<String>,
 }
 
 impl Game {
@@ -114,28 +114,28 @@ impl Game {
         }
     }
 
-    pub(crate) fn is_steam(&self) -> bool {
+    pub fn is_steam(&self) -> bool {
         self.id.starts_with("steam:")
     }
 
-    pub(crate) fn supports_multi_executable(&self) -> bool {
+    pub fn supports_multi_executable(&self) -> bool {
         !self.is_steam() && self.game_directory().is_some()
     }
 
-    pub(crate) fn has_tag(&self, tag: &str) -> bool {
+    pub fn has_tag(&self, tag: &str) -> bool {
         let needle = tag.trim().to_lowercase();
         !needle.is_empty() && self.tags.iter().any(|item| item.to_lowercase() == needle)
     }
 
     /// The installation directory, not a Steam icon or an executable's subfolder.
-    pub(crate) fn game_directory(&self) -> Option<PathBuf> {
+    pub fn game_directory(&self) -> Option<PathBuf> {
         self.game_directory.clone().or_else(|| self.folder()).or_else(|| {
             self.executable.as_ref()?.parent().map(std::path::Path::to_path_buf)
         })
     }
 
     /// The directory path of a folder entry, safe to pass to `folders.candidates`.
-    pub(crate) fn folder(&self) -> Option<PathBuf> {
+    pub fn folder(&self) -> Option<PathBuf> {
         if let Some(folder) = &self.folder_path {
             return Some(folder.clone());
         }
@@ -151,23 +151,23 @@ impl Game {
     }
 
     /// Four-digit release year, when the bridge supplied a parseable date.
-    pub(crate) fn year(&self) -> Option<&str> {
+    pub fn year(&self) -> Option<&str> {
         let release = self.release.as_deref()?;
         let year = release.get(..4)?;
         year.chars().all(|c| c.is_ascii_digit()).then_some(year)
     }
 
-    pub(crate) fn studio(&self) -> &str {
+    pub fn studio(&self) -> &str {
         self.studio.as_deref().unwrap_or("")
     }
 
-    pub(crate) fn studio_name(&self) -> Option<String> {
+    pub fn studio_name(&self) -> Option<String> {
         self.studio
             .as_deref()
             .and_then(crate::library_view::normalize_studio)
     }
 
-    pub(crate) fn has_studio(&self, studio: &str) -> bool {
+    pub fn has_studio(&self, studio: &str) -> bool {
         let Some(needle) = crate::library_view::normalize_studio(studio) else {
             return false;
         };
@@ -213,13 +213,13 @@ DemoGame { art: r####"verdant.png"####, title: r####"Evergreen"####, studio: r##
 
 /// A container as the sidebar renders it.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) struct BottleVm {
-    pub(crate) path: String,
-    pub(crate) name: String,
-    pub(crate) available: bool,
+pub struct BottleVm {
+    pub path: String,
+    pub name: String,
+    pub available: bool,
 }
 
-pub(crate) fn demo_bottles() -> Vec<BottleVm> {
+pub fn demo_bottles() -> Vec<BottleVm> {
     [("demo:galgame", "galgame"), ("demo:galgame-win7", "galgame-win7")]
         .into_iter()
         .map(|(path, name)| BottleVm {
@@ -231,7 +231,7 @@ pub(crate) fn demo_bottles() -> Vec<BottleVm> {
 }
 
 /// The design snapshot, selected by `WHISKY_GPUI_DEMO_DATA=1`.
-pub(crate) fn demo_data() -> &'static [Game] {
+pub fn demo_data() -> &'static [Game] {
     static DEMO: OnceLock<Vec<Game>> = OnceLock::new();
     DEMO.get_or_init(|| {
         DEMO_GAMES
@@ -243,13 +243,13 @@ pub(crate) fn demo_data() -> &'static [Game] {
 }
 
 /// `1` (or `true`) opts into the bundled demo library.
-pub(crate) fn demo_requested(value: Option<&str>) -> bool {
+pub fn demo_requested(value: Option<&str>) -> bool {
     matches!(value, Some("1") | Some("true"))
 }
 
 /// Empty-library copy. `visible_entries` is the count before the search filter:
 /// zero means the selected bottle is genuinely empty, not that a query missed.
-pub(crate) fn empty_library_message(
+pub fn empty_library_message(
     demo: bool,
     bottles: usize,
     visible_entries: usize,
@@ -267,7 +267,7 @@ pub(crate) fn empty_library_message(
 }
 
 /// Whole seconds to a compact duration. Zero or absent renders nothing.
-pub(crate) fn format_play_time(seconds: Option<u64>) -> Option<String> {
+pub fn format_play_time(seconds: Option<u64>) -> Option<String> {
     let seconds = seconds?;
     let minutes = seconds.div_ceil(60);
     if minutes == 0 {
@@ -278,7 +278,7 @@ pub(crate) fn format_play_time(seconds: Option<u64>) -> Option<String> {
 }
 
 /// Unix seconds to `YYYY-MM-DD` in UTC. The bridge sends no time zone.
-pub(crate) fn format_last_played(unix: Option<u64>) -> Option<String> {
+pub fn format_last_played(unix: Option<u64>) -> Option<String> {
     let days = (unix? / 86_400) as i64;
     let (year, month, day) = civil_from_days(days);
     Some(format!("{year:04}-{month:02}-{day:02}"))
@@ -305,15 +305,16 @@ fn asset(file: impl AsRef<std::path::Path>) -> PathBuf {
             .ok()
             .and_then(|exe| Some(exe.parent()?.parent()?.join("Resources")));
         bundled.filter(|path| path.is_dir()).unwrap_or_else(|| {
-            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets")
+            // The demo artwork ships with the GPUI app.
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../apps/whisky-gpui/assets")
         })
     })
     .join(file)
 }
-pub(crate) fn art(i: usize) -> PathBuf {
+pub fn art(i: usize) -> PathBuf {
     asset(DEMO_GAMES[i].art)
 }
-pub(crate) fn ambient(i: usize) -> PathBuf {
+pub fn ambient(i: usize) -> PathBuf {
     asset(format!("{i}-ambient.jpg"))
 }
 

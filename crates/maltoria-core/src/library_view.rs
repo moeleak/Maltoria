@@ -11,15 +11,15 @@ use std::time::{Duration, Instant};
 
 use crate::model::{BottleVm, Game};
 
-#[cfg(test)]
-pub(crate) const UNKNOWN_STUDIO_LABEL: &str = "未知厂商";
+#[cfg(any(test, feature = "test-support"))]
+pub const UNKNOWN_STUDIO_LABEL: &str = "未知厂商";
 
-pub(crate) fn unknown_studio_label() -> &'static str {
+pub fn unknown_studio_label() -> &'static str {
     crate::i18n::s().library.unknown_studio
 }
-pub(crate) const PULL_OPEN_THRESHOLD: f32 = 40.0;
-pub(crate) const PULL_CLOSE_THRESHOLD: f32 = 30.0;
-pub(crate) const PULL_GESTURE_PAUSE_MS: u64 = 260;
+pub const PULL_OPEN_THRESHOLD: f32 = 40.0;
+pub const PULL_CLOSE_THRESHOLD: f32 = 30.0;
+pub const PULL_GESTURE_PAUSE_MS: u64 = 260;
 
 /// Merge per-bottle caches in sidebar order.
 ///
@@ -31,7 +31,7 @@ pub(crate) const PULL_GESTURE_PAUSE_MS: u64 = 260;
 /// relative to the bottle, which is identical for the Steam cache and in-bottle
 /// icons of the same game while remaining distinct for a separate install.
 /// The first bottle in sidebar order wins.
-pub(crate) fn merge_bottles(
+pub fn merge_bottles(
     bottles: &[BottleVm],
     caches: &BTreeMap<String, Vec<Game>>,
 ) -> Vec<Game> {
@@ -65,14 +65,14 @@ fn artwork_key(game: &Game) -> Option<String> {
 
 /// `LibrarySort` (`WhiskyCore/LibraryOrdering.swift:21`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum Sort {
+pub enum Sort {
     Recent,
     Name,
     Bottle,
 }
 
 impl Sort {
-    pub(crate) fn from_index(index: usize) -> Self {
+    pub fn from_index(index: usize) -> Self {
         match index {
             1 => Self::Name,
             2 => Self::Bottle,
@@ -82,15 +82,15 @@ impl Sort {
 }
 
 /// Clicking the current star clears the rating; any other star selects it.
-pub(crate) fn next_rating(current: Option<u8>, star: u8) -> Option<u8> {
+pub fn next_rating(current: Option<u8>, star: u8) -> Option<u8> {
     if current == Some(star) { None } else { Some(star) }
 }
 
-pub(crate) const MAX_TAGS_PER_ENTRY: usize = 32;
-pub(crate) const MAX_TAG_LENGTH: usize = 32;
+pub const MAX_TAGS_PER_ENTRY: usize = 32;
+pub const MAX_TAG_LENGTH: usize = 32;
 
 /// Normalize a user-supplied tag name matching Swift `LibraryTags.normalize`.
-pub(crate) fn normalize_tag(raw: &str) -> Option<String> {
+pub fn normalize_tag(raw: &str) -> Option<String> {
     if raw.contains('\0') {
         return None;
     }
@@ -104,7 +104,7 @@ pub(crate) fn normalize_tag(raw: &str) -> Option<String> {
 }
 
 /// Normalize, deduplicate case-insensitively, and cap a tag list.
-pub(crate) fn normalize_tags<I, S>(raw: I) -> Vec<String>
+pub fn normalize_tags<I, S>(raw: I) -> Vec<String>
 where
     I: IntoIterator<Item = S>,
     S: AsRef<str>,
@@ -128,7 +128,7 @@ where
 
 /// Tag classification filter across library views.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
-pub(crate) enum TagFilter {
+pub enum TagFilter {
     #[default]
     All,
     Untagged,
@@ -136,17 +136,17 @@ pub(crate) enum TagFilter {
 }
 
 impl TagFilter {
-    pub(crate) fn is_active(&self) -> bool {
+    pub fn is_active(&self) -> bool {
         !matches!(self, Self::All)
     }
 
-    pub(crate) fn contains(&self, tag: &str) -> bool {
+    pub fn contains(&self, tag: &str) -> bool {
         let needle = tag.trim().to_lowercase();
         !needle.is_empty()
             && matches!(self, Self::Tags(tags) if tags.iter().any(|t| t.to_lowercase() == needle))
     }
 
-    pub(crate) fn toggle_single(&mut self, tag: &str) {
+    pub fn toggle_single(&mut self, tag: &str) {
         let Some(clean) = normalize_tag(tag) else {
             return;
         };
@@ -158,7 +158,7 @@ impl TagFilter {
         }
     }
 
-    pub(crate) fn toggle_multi(&mut self, tag: &str) {
+    pub fn toggle_multi(&mut self, tag: &str) {
         let Some(clean) = normalize_tag(tag) else {
             return;
         };
@@ -179,7 +179,7 @@ impl TagFilter {
         };
     }
 
-    pub(crate) fn display_label(&self) -> String {
+    pub fn display_label(&self) -> String {
         let l = &crate::i18n::s().library;
         match self {
             Self::All => l.filter_all.to_owned(),
@@ -190,7 +190,7 @@ impl TagFilter {
 }
 
 /// Case-insensitive match over the name, developer, release year, and tags.
-pub(crate) fn matches_query(game: &Game, query: &str) -> bool {
+pub fn matches_query(game: &Game, query: &str) -> bool {
     let query = query.trim().to_lowercase();
     if query.is_empty() {
         return true;
@@ -203,7 +203,7 @@ pub(crate) fn matches_query(game: &Game, query: &str) -> bool {
         || game.tags.iter().any(|tag| tag.to_lowercase().contains(&query))
 }
 
-pub(crate) fn matches_tag_filter(game: &Game, filter: &TagFilter) -> bool {
+pub fn matches_tag_filter(game: &Game, filter: &TagFilter) -> bool {
     match filter {
         TagFilter::All => true,
         TagFilter::Untagged => game.tags.is_empty(),
@@ -212,7 +212,7 @@ pub(crate) fn matches_tag_filter(game: &Game, filter: &TagFilter) -> bool {
 }
 
 /// Normalize a developer / studio display name by collapsing internal whitespace.
-pub(crate) fn normalize_studio(raw: &str) -> Option<String> {
+pub fn normalize_studio(raw: &str) -> Option<String> {
     if raw.contains('\0') {
         return None;
     }
@@ -223,7 +223,7 @@ pub(crate) fn normalize_studio(raw: &str) -> Option<String> {
 
 /// Studio / developer classification filter across library views.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
-pub(crate) enum StudioFilter {
+pub enum StudioFilter {
     #[default]
     All,
     Unknown,
@@ -231,11 +231,11 @@ pub(crate) enum StudioFilter {
 }
 
 impl StudioFilter {
-    pub(crate) fn is_active(&self) -> bool {
+    pub fn is_active(&self) -> bool {
         !matches!(self, Self::All)
     }
 
-    pub(crate) fn matches(&self, game: &Game) -> bool {
+    pub fn matches(&self, game: &Game) -> bool {
         match self {
             Self::All => true,
             Self::Unknown => game.studio_name().is_none(),
@@ -243,14 +243,14 @@ impl StudioFilter {
         }
     }
 
-    pub(crate) fn is_studio(&self, studio: &str) -> bool {
+    pub fn is_studio(&self, studio: &str) -> bool {
         let Some(clean) = normalize_studio(studio) else {
             return false;
         };
         matches!(self, Self::Studio(active) if active.eq_ignore_ascii_case(&clean))
     }
 
-    pub(crate) fn toggle_studio(&mut self, studio: &str) {
+    pub fn toggle_studio(&mut self, studio: &str) {
         let Some(clean) = normalize_studio(studio) else {
             return;
         };
@@ -261,7 +261,7 @@ impl StudioFilter {
         }
     }
 
-    pub(crate) fn toggle_unknown(&mut self) {
+    pub fn toggle_unknown(&mut self) {
         *self = if *self == Self::Unknown {
             Self::All
         } else {
@@ -269,7 +269,7 @@ impl StudioFilter {
         };
     }
 
-    pub(crate) fn display_label(&self) -> String {
+    pub fn display_label(&self) -> String {
         match self {
             Self::All => crate::i18n::s().library.filter_all.to_owned(),
             Self::Unknown => unknown_studio_label().to_owned(),
@@ -279,15 +279,15 @@ impl StudioFilter {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) struct StudioCluster {
-    pub(crate) key: String,
-    pub(crate) label: String,
-    pub(crate) is_unknown: bool,
-    pub(crate) indices: Vec<usize>,
+pub struct StudioCluster {
+    pub key: String,
+    pub label: String,
+    pub is_unknown: bool,
+    pub indices: Vec<usize>,
 }
 
 /// Collect studio counts in the visible scope, ordered by count desc then natural name asc.
-pub(crate) fn collect_studio_counts(
+pub fn collect_studio_counts(
     games: &[Game],
     slot: usize,
     show_hidden: bool,
@@ -316,7 +316,7 @@ pub(crate) fn collect_studio_counts(
 }
 
 /// Count of visible non-launcher games without a studio name in the scope.
-pub(crate) fn unknown_studio_count(games: &[Game], slot: usize, show_hidden: bool) -> usize {
+pub fn unknown_studio_count(games: &[Game], slot: usize, show_hidden: bool) -> usize {
     games
         .iter()
         .filter(|game| {
@@ -330,7 +330,7 @@ pub(crate) fn unknown_studio_count(games: &[Game], slot: usize, show_hidden: boo
 
 /// Group ordered game indices by studio while preserving their relative order inside each cluster.
 /// Known studios come first (larger clusters first, then alphabetically); unknown comes last.
-pub(crate) fn group_indices_by_studio(games: &[Game], indices: &[usize]) -> Vec<StudioCluster> {
+pub fn group_indices_by_studio(games: &[Game], indices: &[usize]) -> Vec<StudioCluster> {
     let mut grouped: std::collections::HashMap<String, (String, Vec<usize>)> =
         std::collections::HashMap::new();
     let mut unknown = Vec::new();
@@ -376,24 +376,24 @@ pub(crate) fn group_indices_by_studio(games: &[Game], indices: &[usize]) -> Vec<
 
 /// Scroll-wheel phase simplified for the pull-down drawer state machine.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum PullWheelPhase {
+pub enum PullWheelPhase {
     Started,
     Moved,
     Ended,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub(crate) struct PullRevealOutcome {
-    pub(crate) changed: bool,
-    pub(crate) consume: bool,
-    pub(crate) opened: bool,
-    pub(crate) closed: bool,
-    pub(crate) needs_idle_reset: bool,
+pub struct PullRevealOutcome {
+    pub changed: bool,
+    pub consume: bool,
+    pub opened: bool,
+    pub closed: bool,
+    pub needs_idle_reset: bool,
 }
 
 /// State machine implementing the two-step "second downward pull at top" drawer gesture.
 #[derive(Clone, Debug, Default)]
-pub(crate) struct PullRevealState {
+pub struct PullRevealState {
     open: bool,
     pull_distance: f32,
     close_scroll_distance: f32,
@@ -404,15 +404,15 @@ pub(crate) struct PullRevealState {
 }
 
 impl PullRevealState {
-    pub(crate) fn is_open(&self) -> bool {
+    pub fn is_open(&self) -> bool {
         self.open
     }
 
-    pub(crate) fn pull_fraction(&self) -> f32 {
+    pub fn pull_fraction(&self) -> f32 {
         (self.pull_distance / PULL_OPEN_THRESHOLD).clamp(0.0, 1.0)
     }
 
-    pub(crate) fn set_open(&mut self, open: bool) {
+    pub fn set_open(&mut self, open: bool) {
         self.open = open;
         self.pull_distance = 0.0;
         self.close_scroll_distance = 0.0;
@@ -421,7 +421,7 @@ impl PullRevealState {
         }
     }
 
-    pub(crate) fn reset_idle_pull(&mut self) -> bool {
+    pub fn reset_idle_pull(&mut self) -> bool {
         if !self.open && !self.in_touch_gesture && self.pull_distance > 0.0 {
             self.pull_distance = 0.0;
             true
@@ -430,7 +430,7 @@ impl PullRevealState {
         }
     }
 
-    pub(crate) fn on_wheel(
+    pub fn on_wheel(
         &mut self,
         delta_y: f32,
         scroll_y: f32,
@@ -533,8 +533,8 @@ impl PullRevealState {
 
 /// Indices in the visible scope, before ordering. `slot` is one-based and `0`
 /// means the whole library.
-#[cfg(test)]
-pub(crate) fn filter_indices(
+#[cfg(any(test, feature = "test-support"))]
+pub fn filter_indices(
     games: &[Game],
     query: &str,
     slot: usize,
@@ -543,8 +543,8 @@ pub(crate) fn filter_indices(
     filter_indices_with_filters(games, query, &TagFilter::All, &StudioFilter::All, slot, show_hidden)
 }
 
-#[cfg(test)]
-pub(crate) fn filter_indices_with_tags(
+#[cfg(any(test, feature = "test-support"))]
+pub fn filter_indices_with_tags(
     games: &[Game],
     query: &str,
     tag_filter: &TagFilter,
@@ -554,7 +554,7 @@ pub(crate) fn filter_indices_with_tags(
     filter_indices_with_filters(games, query, tag_filter, &StudioFilter::All, slot, show_hidden)
 }
 
-pub(crate) fn filter_indices_with_filters(
+pub fn filter_indices_with_filters(
     games: &[Game],
     query: &str,
     tag_filter: &TagFilter,
@@ -577,7 +577,7 @@ pub(crate) fn filter_indices_with_filters(
         .collect()
 }
 
-pub(crate) fn collect_tag_counts(games: &[Game], show_hidden: bool) -> Vec<(String, usize)> {
+pub fn collect_tag_counts(games: &[Game], show_hidden: bool) -> Vec<(String, usize)> {
     let mut counts: std::collections::HashMap<String, (String, usize)> =
         std::collections::HashMap::new();
     for game in games {
@@ -604,7 +604,7 @@ pub(crate) fn collect_tag_counts(games: &[Game], show_hidden: bool) -> Vec<(Stri
     list
 }
 
-pub(crate) fn untagged_count(games: &[Game], show_hidden: bool) -> usize {
+pub fn untagged_count(games: &[Game], show_hidden: bool) -> usize {
     games
         .iter()
         .filter(|game| !game.is_launcher && (show_hidden || !game.hidden) && game.tags.is_empty())
@@ -615,7 +615,7 @@ pub(crate) fn untagged_count(games: &[Game], show_hidden: bool) -> usize {
 /// `LibraryOrdering.byName`, so the result is deterministic. `groups_launchers`
 /// mirrors `groupsLaunchers: displayMode != .timeline` (`LibraryView.swift`):
 /// launchers sink below the games unless the timeline presentation is active.
-pub(crate) fn sort_indices(
+pub fn sort_indices(
     games: &[Game],
     indices: &mut [usize],
     sort: Sort,
@@ -686,7 +686,7 @@ fn bottle_name<'a>(game: &Game, bottles: &'a [BottleVm]) -> &'a str {
 /// uses `localizedStandardCompare`; for the ASCII and CJK titles in the
 /// library this matches it, with the documented difference that collation is
 /// by scalar value rather than the user's locale.
-pub(crate) fn natural_cmp(first: &str, second: &str) -> Ordering {
+pub fn natural_cmp(first: &str, second: &str) -> Ordering {
     let first: Vec<char> = first.to_lowercase().chars().collect();
     let second: Vec<char> = second.to_lowercase().chars().collect();
     let (mut left, mut right) = (0, 0);

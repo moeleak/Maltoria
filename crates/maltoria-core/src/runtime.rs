@@ -20,19 +20,19 @@ use crate::bridge::dto::{ClipboardInteractionDto, LaunchReplyDto, RuntimeEntryDt
 /// `LibraryRuntimeCapabilities` option-set bits (`LibraryRuntime.swift`).
 /// Public within the crate so the headless launch probe can decode the same
 /// bitmask the button gate reads.
-pub(crate) const CAP_LAUNCH: i64 = 1 << 0;
-pub(crate) const CAP_CANCEL: i64 = 1 << 1;
-pub(crate) const CAP_STOP: i64 = 1 << 2;
+pub const CAP_LAUNCH: i64 = 1 << 0;
+pub const CAP_CANCEL: i64 = 1 << 1;
+pub const CAP_STOP: i64 = 1 << 2;
 
 /// Poll cadence while at least one entry is not idle. A launch or an exit is
 /// the interesting event, and both are only observable through this cursor.
-pub(crate) const BUSY_POLL: Duration = Duration::from_secs(1);
+pub const BUSY_POLL: Duration = Duration::from_secs(1);
 /// Poll cadence when every entry is idle: nothing can change on its own except
 /// a launch from another frontend, which the next poll still reports.
-pub(crate) const IDLE_POLL: Duration = Duration::from_secs(4);
+pub const IDLE_POLL: Duration = Duration::from_secs(4);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum RuntimeState {
+pub enum RuntimeState {
     Idle,
     CheckingLaunch,
     Preparing,
@@ -46,7 +46,7 @@ pub(crate) enum RuntimeState {
 }
 
 impl RuntimeState {
-    pub(crate) fn from_wire(raw: &str) -> Self {
+    pub fn from_wire(raw: &str) -> Self {
         match raw {
             "idle" => Self::Idle,
             "checkingLaunch" => Self::CheckingLaunch,
@@ -62,12 +62,12 @@ impl RuntimeState {
     /// Anything but idle keeps the fast cadence, including `running`: a game
     /// exiting is a change the card has to show. `Unknown` counts as active for
     /// the same reason — the entry is doing something we cannot name.
-    pub(crate) fn is_active(self) -> bool {
+    pub fn is_active(self) -> bool {
         self != Self::Idle
     }
 
     /// Short phase label mirroring Swift's `phaseLabel`, used by the card badge.
-    pub(crate) fn phase_label(self) -> &'static str {
+    pub fn phase_label(self) -> &'static str {
         let r = &crate::i18n::s().runtime;
         match self {
             Self::CheckingLaunch => r.checking_launch,
@@ -82,33 +82,33 @@ impl RuntimeState {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) struct RuntimeEntry {
-    pub(crate) state: RuntimeState,
-    pub(crate) capabilities: i64,
+pub struct RuntimeEntry {
+    pub state: RuntimeState,
+    pub capabilities: i64,
 }
 
 /// What the primary button does. `None` in [`PrimaryAction`] means the button
 /// is informational: it names the phase and cannot be pressed.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum RuntimeAction {
+pub enum RuntimeAction {
     Launch,
     Cancel,
     Stop,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) struct PrimaryAction {
-    pub(crate) label: &'static str,
-    pub(crate) action: Option<RuntimeAction>,
-    pub(crate) enabled: bool,
+pub struct PrimaryAction {
+    pub label: &'static str,
+    pub action: Option<RuntimeAction>,
+    pub enabled: bool,
     /// Show the toolkit spinner next to the label (pre-launch phases).
-    pub(crate) busy: bool,
+    pub busy: bool,
 }
 
 impl PrimaryAction {
     /// Neutral, disabled "启动": used before a container is configured and for
     /// states this build does not understand. Never panics, never guesses.
-    pub(crate) fn unavailable() -> Self {
+    pub fn unavailable() -> Self {
         Self {
             label: crate::i18n::s().runtime.launch,
             action: None,
@@ -124,7 +124,7 @@ impl PrimaryAction {
 /// `checkingLaunch` has no cancel: `LibraryRuntimeController.cancelLaunch`
 /// only accepts preparing or launching, so offering Cancel there would be a
 /// dead control.
-pub(crate) fn primary_action_for(state: RuntimeState, capabilities: i64) -> PrimaryAction {
+pub fn primary_action_for(state: RuntimeState, capabilities: i64) -> PrimaryAction {
     let can_launch = capabilities & CAP_LAUNCH != 0;
     let can_cancel = capabilities & CAP_CANCEL != 0;
     let can_stop = capabilities & CAP_STOP != 0;
@@ -194,14 +194,14 @@ pub(crate) fn primary_action_for(state: RuntimeState, capabilities: i64) -> Prim
 /// UI stores. `resync` means "this list is the whole truth": stale entries are
 /// dropped instead of merged.
 #[derive(Debug, Clone)]
-pub(crate) struct RuntimeUpdate {
-    pub(crate) container: String,
-    pub(crate) entries: Vec<RuntimeEntryDto>,
-    pub(crate) resync: bool,
+pub struct RuntimeUpdate {
+    pub container: String,
+    pub entries: Vec<RuntimeEntryDto>,
+    pub resync: bool,
 }
 
 impl RuntimeUpdate {
-    pub(crate) fn resync(container: &str, entries: Vec<RuntimeEntryDto>) -> Self {
+    pub fn resync(container: &str, entries: Vec<RuntimeEntryDto>) -> Self {
         Self {
             container: container.to_owned(),
             entries,
@@ -209,7 +209,7 @@ impl RuntimeUpdate {
         }
     }
 
-    pub(crate) fn merge(container: &str, entries: Vec<RuntimeEntryDto>) -> Self {
+    pub fn merge(container: &str, entries: Vec<RuntimeEntryDto>) -> Self {
         Self {
             container: container.to_owned(),
             entries,
@@ -225,12 +225,12 @@ impl RuntimeUpdate {
 /// has no container: an entry is actionable exactly when it is present here,
 /// which is also exactly what `runtime.launch` accepts.
 #[derive(Debug, Default)]
-pub(crate) struct RuntimeTable {
+pub struct RuntimeTable {
     entries: HashMap<String, RuntimeEntry>,
 }
 
 impl RuntimeTable {
-    pub(crate) fn apply(&mut self, update: RuntimeUpdate) {
+    pub fn apply(&mut self, update: RuntimeUpdate) {
         if update.resync {
             self.entries.clear();
         }
@@ -245,13 +245,13 @@ impl RuntimeTable {
         }
     }
 
-    pub(crate) fn entry(&self, id: &str) -> Option<RuntimeEntry> {
+    pub fn entry(&self, id: &str) -> Option<RuntimeEntry> {
         self.entries.get(id).copied()
     }
 
     /// Optimistic transition after an accepted mutation. The next snapshot
     /// overwrites it, so this only has to be plausible, never authoritative.
-    pub(crate) fn set_state(&mut self, id: &str, state: RuntimeState) {
+    pub fn set_state(&mut self, id: &str, state: RuntimeState) {
         if let Some(entry) = self.entries.get_mut(id) {
             entry.state = state;
         }
@@ -259,7 +259,7 @@ impl RuntimeTable {
 }
 
 /// Cadence selection as a pure function so the busy/idle split is testable.
-pub(crate) fn poll_interval(any_active: bool) -> Duration {
+pub fn poll_interval(any_active: bool) -> Duration {
     if any_active { BUSY_POLL } else { IDLE_POLL }
 }
 
@@ -269,24 +269,24 @@ pub(crate) fn poll_interval(any_active: bool) -> Duration {
 /// already configured and configures each one at most once. `ensure` returns
 /// whether a command must be sent; that return value is what the tests pin.
 #[derive(Debug, Default)]
-pub(crate) struct ConfiguredBottles {
+pub struct ConfiguredBottles {
     configured: std::collections::HashSet<String>,
 }
 
 impl ConfiguredBottles {
     /// `true` the first time this container is seen, `false` afterwards.
-    pub(crate) fn ensure(&mut self, container: &str) -> bool {
+    pub fn ensure(&mut self, container: &str) -> bool {
         self.configured.insert(container.to_owned())
     }
 
     /// A new helper process has no configured containers.
-    pub(crate) fn clear(&mut self) {
+    pub fn clear(&mut self) {
         self.configured.clear();
     }
 
     /// A re-read of this bottle may have changed its entries, so the next
     /// selection has to configure it again.
-    pub(crate) fn forget(&mut self, container: &str) {
+    pub fn forget(&mut self, container: &str) {
         self.configured.remove(container);
     }
 }
@@ -298,32 +298,32 @@ impl ConfiguredBottles {
 /// second optimistic change for the same entry keeps the *first* saved value,
 /// so a failed burst still rolls back to the committed state.
 #[derive(Debug, Default)]
-pub(crate) struct PendingEdits<T> {
+pub struct PendingEdits<T> {
     previous: std::collections::HashMap<String, T>,
 }
 
 impl<T> PendingEdits<T> {
-    pub(crate) fn begin(&mut self, key: &str, previous: T) {
+    pub fn begin(&mut self, key: &str, previous: T) {
         self.previous.entry(key.to_owned()).or_insert(previous);
     }
 
     /// Whether an edit is still in flight. Used to keep optimistic values on
     /// top of an authoritative snapshot that raced the reply.
-    pub(crate) fn contains(&self, key: &str) -> bool {
+    pub fn contains(&self, key: &str) -> bool {
         self.previous.contains_key(key)
     }
 
     /// The value to restore, if this entry still has an outstanding edit.
-    pub(crate) fn fail(&mut self, key: &str) -> Option<T> {
+    pub fn fail(&mut self, key: &str) -> Option<T> {
         self.previous.remove(key)
     }
 
-    pub(crate) fn succeed(&mut self, key: &str) {
+    pub fn succeed(&mut self, key: &str) {
         self.previous.remove(key);
     }
 
     /// A new helper session cannot deliver the old edits' replies.
-    pub(crate) fn clear(&mut self) {
+    pub fn clear(&mut self) {
         self.previous.clear();
     }
 }
@@ -333,13 +333,13 @@ impl<T> PendingEdits<T> {
 /// is whether the clipboard is cleared first. Any other string is rejected with
 /// `invalid_params`, so the sheet offers only these plus a dismiss.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum ClipboardDecision {
+pub enum ClipboardDecision {
     Clear,
     Keep,
 }
 
 impl ClipboardDecision {
-    pub(crate) fn as_wire(self) -> &'static str {
+    pub fn as_wire(self) -> &'static str {
         match self {
             Self::Clear => "clear",
             Self::Keep => "keep",
@@ -351,21 +351,21 @@ impl ClipboardDecision {
 /// and clipboard version; it must be sent back unchanged or the helper answers
 /// `stale_interaction`.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) struct ClipboardPrompt {
-    pub(crate) container: String,
-    pub(crate) entry_id: String,
+pub struct ClipboardPrompt {
+    pub container: String,
+    pub entry_id: String,
     /// The launch's executable override, echoed on the second call so the
     /// resolved launch runs the same target the first one named.
-    pub(crate) executable: Option<String>,
-    pub(crate) token: String,
-    pub(crate) content_type: String,
-    pub(crate) size_bytes: i64,
-    pub(crate) preview: Option<String>,
+    pub executable: Option<String>,
+    pub token: String,
+    pub content_type: String,
+    pub size_bytes: i64,
+    pub preview: Option<String>,
 }
 
 impl ClipboardPrompt {
     /// `None` when the reply names an interaction this build cannot answer.
-    pub(crate) fn new(
+    pub fn new(
         container: &str,
         entry_id: &str,
         executable: Option<&str>,
@@ -386,7 +386,7 @@ impl ClipboardPrompt {
     }
 
     /// The second `runtime.launch` call. The token travels unchanged.
-    pub(crate) fn params(&self, decision: ClipboardDecision) -> Value {
+    pub fn params(&self, decision: ClipboardDecision) -> Value {
         let mut params = json!({
             "container": self.container,
             "entryID": self.entry_id,
@@ -401,7 +401,7 @@ impl ClipboardPrompt {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) enum LaunchOutcome {
+pub enum LaunchOutcome {
     Accepted,
     /// The helper stopped before launching and wants a clipboard decision.
     Prompt(ClipboardPrompt),
@@ -409,7 +409,7 @@ pub(crate) enum LaunchOutcome {
     Rejected,
 }
 
-pub(crate) fn interpret_launch_reply(
+pub fn interpret_launch_reply(
     container: &str,
     entry_id: &str,
     executable: Option<&str>,

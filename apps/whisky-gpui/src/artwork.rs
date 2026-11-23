@@ -12,7 +12,7 @@ const MAX_QUEUED: usize = 64;
 const MAX_SOURCE_BYTES: u64 = 128 * 1024 * 1024;
 const EDGES: [u32; 7] = [128, 256, 512, 768, 1024, 1536, 2048];
 /// Blur levels the backdrop control can pick; level 0 is the sharp image.
-pub(crate) const BLUR_LEVELS: u8 = 5;
+pub(crate) use crate::preferences::BLUR_LEVELS;
 /// Blur erases high-frequency detail, so variants decode at a small fixed
 /// edge instead of the display edge — cheap to compute and ~25× less memory.
 const BLUR_EDGE: u32 = 384;
