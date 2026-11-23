@@ -653,7 +653,7 @@ mod tests {
             let tbl = s();
             assert!(!tbl.common.cancel.is_empty());
             assert!(!tbl.menus.about.is_empty());
-            assert!(!tbl.settings.language_label.is_empty());
+            assert!(!tbl.settings.appearance_label.is_empty());
             assert!(!tbl.library.title.is_empty());
             assert!(!tbl.dialogs.about_title.is_empty());
             assert!(!tbl.capture.title.is_empty());

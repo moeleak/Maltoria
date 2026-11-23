@@ -33,27 +33,6 @@ reason = "bottle-config wire schema title mirrored into the bridge payload; UI r
 [hardcoded."config.rs::音频"]
 reason = "bottle-config wire schema title mirrored into the bridge payload; UI renders maps.config_section"
 
-[hardcoded."main.rs::Maltoria"]
-reason = "product name"
-
-[hardcoded."main.rs::人物"]
-reason = "demo/screenshot fixture data (visual stage captures)"
-
-[hardcoded."main.rs::作品的中文名称"]
-reason = "demo/screenshot fixture data (visual stage captures)"
-
-[hardcoded."main.rs::日本語"]
-reason = "native language name, shown as-is in every locale"
-
-[hardcoded."main.rs::来自所选平台的简介。"]
-reason = "demo/screenshot fixture data (visual stage captures)"
-
-[hardcoded."main.rs::简体中文"]
-reason = "native language name, shown as-is in every locale"
-
-[hardcoded."main.rs::한국어"]
-reason = "native language name, shown as-is in every locale"
-
 [hardcoded."program_settings.rs::日本語"]
 reason = "native language name, shown as-is in every locale"
 
@@ -64,36 +43,6 @@ reason = "native language name, shown as-is in every locale"
 reason = "native language name, shown as-is in every locale"
 
 [hardcoded."program_settings.rs::한국어"]
-reason = "native language name, shown as-is in every locale"
-
-[hardcoded."views/dialogs.rs::Copyright © 2023–2026 Whisky & Maltoria Contributors"]
-reason = "copyright line"
-
-[hardcoded."views/dialogs.rs::日本語"]
-reason = "native language name, shown as-is in every locale"
-
-[hardcoded."views/dialogs.rs::简体中文"]
-reason = "native language name, shown as-is in every locale"
-
-[hardcoded."views/dialogs.rs::繁體中文"]
-reason = "native language name, shown as-is in every locale"
-
-[hardcoded."views/dialogs.rs::한국어"]
-reason = "native language name, shown as-is in every locale"
-
-[hardcoded."views/library.rs::CV"]
-reason = "voice-actor label glyph (industry abbreviation)"
-
-[hardcoded."views/translation.rs::日本語 (ja)"]
-reason = "native language name, shown as-is in every locale"
-
-[hardcoded."views/translation.rs::简体中文 (zh-Hans)"]
-reason = "native language name, shown as-is in every locale"
-
-[hardcoded."views/translation.rs::繁體中文 (zh-Hant)"]
-reason = "native language name, shown as-is in every locale"
-
-[hardcoded."views/translation.rs::한국어 (ko)"]
 reason = "native language name, shown as-is in every locale"
 
 [bridge_dynamic]
@@ -116,32 +65,11 @@ reason = "both branches are literal codes covered by bridge maps"
 [identical."app.runtime_name"]
 reason = "product name"
 
-[identical."bottle.engine_unsupported_reason"]
-reason = "parameter-only template; same word order in every locale"
-
-[identical."bottle.winetricks_ellipsis"]
-reason = "product name"
-
-[identical."dialogs.path_to_game_exe"]
-reason = "placeholder path literal"
-
-[identical."metadata.ymgal_name"]
-reason = "proper noun (YMGal); zh-Hans uses 月幕"
-
-[identical."settings.cover_engine_realcugan_cpu_linux"]
-reason = "product name"
-
-[identical."settings.cover_engine_realcugan_gpu_linux"]
-reason = "product name"
-
 [identical."settings.features_list_sep"]
 reason = "list separator is locale-specific punctuation; ja/ko match en by convention"
 
 [identical."settings.features_separator"]
 reason = "sentence separator is locale-specific punctuation; ja/ko match en by convention"
-
-[identical."translation.lang_en"]
-reason = "locale label shown in English"
 
 [identical."windows.sidebar_title_bottle"]
 reason = "parameter-only template; same word order in every locale"
