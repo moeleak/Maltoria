@@ -113,6 +113,9 @@ reason = "both branches are literal codes covered by bridge maps"
 reason = "both branches are literal codes covered by bridge maps"
 
 [identical]
+[identical."app.runtime_name"]
+reason = "product name"
+
 [identical."bottle.engine_unsupported_reason"]
 reason = "parameter-only template; same word order in every locale"
 

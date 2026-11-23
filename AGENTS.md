@@ -24,6 +24,21 @@ cargo test --locked --manifest-path apps/whisky-gpui/Cargo.toml
 Standalone Cargo package (own `Cargo.lock`, exact `=` pinned deps). It uses the
 core's modules under their old paths (`crate::bridge`, `crate::i18n`, …).
 
+## Material app (`apps/maltoria`)
+
+```bash
+cargo test --locked --manifest-path apps/maltoria/Cargo.toml
+cargo run --manifest-path apps/maltoria/Cargo.toml -- --demo   # sample games, no helper
+```
+
+The Material 3 interface, on iced 0.14 and `material-ui-rs`
+(`moeleak/material-ui-rs`, pinned in `Cargo.lock`): a library of covers, play
+time, and settings. Every game lives in one container — the one remembered in
+`maltoria-ui.json`, or else the one with the most games, or a new one once the
+runtime is installed. Keep a widget's position in the tree stable when a
+message it sends changes the view (see `library::view`): moving it resets the
+state of everything inside, such as an open context menu.
+
 ## i18n
 
 ```bash

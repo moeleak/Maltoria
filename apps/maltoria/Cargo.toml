@@ -1,0 +1,43 @@
+[package]
+name = "maltoria"
+version = "0.1.0"
+edition = "2024"
+publish = false
+license = "GPL-3.0-or-later"
+description = "Maltoria's Material 3 interface: a game library, play time and one container"
+
+[dependencies]
+chrono = "=0.4.45"
+iced = { version = "=0.14.0", default-features = false, features = [
+    "canvas",
+    "image-without-codecs",
+    "linux-theme-detection",
+    "thread-pool",
+    "tiny-skia",
+    "wayland",
+    "wgpu",
+    "x11",
+] }
+maltoria-core = { path = "../../crates/maltoria-core" }
+material-ui-rs = { git = "https://github.com/moeleak/material-ui-rs.git", branch = "feat/launcher-widgets" }
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = "=1.0.154"
+smol = "=2.0.2"
+
+[dev-dependencies]
+maltoria-core = { path = "../../crates/maltoria-core", features = ["test-support"] }
+
+[profile.release]
+lto = "thin"
+
+# Covers decode on a background thread; unoptimized codecs take seconds a cover.
+[profile.dev.package]
+fdeflate.opt-level = 3
+image.opt-level = 3
+png.opt-level = 3
+zune-jpeg.opt-level = 3
+
+# iced 0.14 renders through wgpu 27, whose Metal backend still links block
+# 0.1.6; material-ui-rs pins this fix until iced moves to wgpu 29.
+[patch.crates-io]
+block = { git = "https://github.com/Dicklesworthstone/rust-block.git", rev = "b39ae859d1ee8e8cb5eef6a516471f1578d26b96" }

@@ -1,0 +1,392 @@
+//! Settings: the Wine runtime, the container, the game folders, and the look.
+//!
+//! Only what a visual novel needs is here; the container's Wine tools cover
+//! the rest.
+
+use iced::widget::{Column, Row, Space, button as iced_button, container};
+use iced::{Alignment, Length};
+use maltoria_core::bridge::dto::{Container, FoldersDto, SetupStatusDto};
+use maltoria_core::i18n::s;
+use material::widget::button::{self, ButtonVariant};
+use material::widget::theme_picker::MaterialColor;
+use material::widget::{card, page, progress_bar, segmented_button};
+use material::{Theme, tokens};
+use material_ui_rs as material;
+
+use crate::Message;
+
+/// The runtime installer's progress, while it runs.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct Install {
+    pub stage: Option<String>,
+    /// Bytes received and expected while the archive downloads.
+    pub progress: Option<(u64, u64)>,
+}
+
+/// The appearance the interface follows.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Appearance {
+    System,
+    Light,
+    Dark,
+}
+
+impl Appearance {
+    pub const ALL: [Self; 3] = [Self::System, Self::Light, Self::Dark];
+
+    pub fn from_dark_mode(dark_mode: Option<bool>) -> Self {
+        match dark_mode {
+            None => Self::System,
+            Some(false) => Self::Light,
+            Some(true) => Self::Dark,
+        }
+    }
+
+    pub fn dark_mode(self) -> Option<bool> {
+        match self {
+            Self::System => None,
+            Self::Light => Some(false),
+            Self::Dark => Some(true),
+        }
+    }
+
+    fn label(self) -> &'static str {
+        match self {
+            Self::System => s().app.appearance_system,
+            Self::Light => s().theme.light,
+            Self::Dark => s().theme.dark,
+        }
+    }
+}
+
+/// What the settings page shows.
+pub struct View<'a> {
+    pub setup: Option<&'a SetupStatusDto>,
+    pub install: Option<&'a Install>,
+    pub container: Option<&'a Container>,
+    pub folders: Option<&'a FoldersDto>,
+    pub color: MaterialColor,
+    pub appearance: Appearance,
+}
+
+pub fn view(settings: View<'_>) -> material::Element<'_, Message> {
+    let app = &s().app;
+
+    page::surface(
+        page::header(app.settings_title, app.settings_subtitle),
+        page::sections([
+            page::section(
+                s().settings.runtime_title,
+                runtime(settings.setup, settings.install),
+            )
+            .into(),
+            page::section(app.container_section, container_card(settings.container)).into(),
+            page::section(app.folders_section, folders(settings.folders)).into(),
+            page::section(
+                s().settings.appearance_label,
+                appearance(settings.color, settings.appearance),
+            )
+            .into(),
+            page::section(s().dialogs.about_title, about()).into(),
+        ]),
+    )
+    .into()
+}
+
+fn row<'a>(
+    title: impl Into<String>,
+    detail: impl Into<String>,
+    trailing: impl Into<material::Element<'a, Message>>,
+) -> material::Element<'a, Message> {
+    let detail = detail.into();
+    let mut text = Column::new()
+        .push(material::text::type_scale(
+            title.into(),
+            tokens::typography::BODY_LARGE,
+        ))
+        .spacing(2)
+        .width(Length::Fill);
+
+    // An empty line would pull the title above the trailing control's center.
+    if !detail.is_empty() {
+        text = text.push(
+            material::text::type_scale(detail, tokens::typography::BODY_MEDIUM)
+                .style(material::text::surface_variant),
+        );
+    }
+
+    Row::new()
+        .push(text)
+        .push(trailing)
+        .spacing(16)
+        .align_y(Alignment::Center)
+        .into()
+}
+
+fn runtime<'a>(
+    setup: Option<&'a SetupStatusDto>,
+    install: Option<&'a Install>,
+) -> material::Element<'a, Message> {
+    let app = &s().app;
+
+    if let Some(install) = install {
+        let fraction = install
+            .progress
+            .filter(|(_, total)| *total > 0)
+            .map(|(received, total)| received as f32 / total as f32);
+        let bar = match fraction {
+            Some(progress) => {
+                progress_bar::linear(progress_bar::LinearProgressMode::determinate(progress, 0.0))
+            }
+            None => progress_bar::linear(progress_bar::LinearProgressMode::indeterminate(0.0)),
+        };
+
+        return card::filled(
+            Column::new()
+                .push(row(
+                    app.runtime_installing,
+                    install.stage.clone().unwrap_or_default(),
+                    Space::new(),
+                ))
+                .push(bar)
+                .spacing(12),
+        )
+        .padding(16)
+        .width(Length::Fill)
+        .into();
+    }
+
+    let installed = setup.is_some_and(|setup| setup.managed_installed.unwrap_or(setup.installed));
+    let version = setup.and_then(|setup| setup.version.clone());
+
+    let (detail, action): (String, material::Element<'a, Message>) = match (setup, installed) {
+        (None, _) => (s().common.loading.to_owned(), Space::new().into()),
+        (Some(_), true) => (
+            version.map_or_else(
+                || s().common.installed.to_owned(),
+                |version| s().settings.runtime_installed_version(&version),
+            ),
+            button::button(s().settings.check_updates, ButtonVariant::Text)
+                .on_press(Message::CheckRuntimeUpdate)
+                .into(),
+        ),
+        (Some(_), false) => (
+            s().common.not_installed.to_owned(),
+            button::button(app.runtime_install, ButtonVariant::Filled)
+                .on_press(Message::InstallRuntime)
+                .into(),
+        ),
+    };
+
+    card::filled(row(app.runtime_name, detail, action))
+        .padding(16)
+        .width(Length::Fill)
+        .into()
+}
+
+fn container_card(container: Option<&Container>) -> material::Element<'_, Message> {
+    let app = &s().app;
+
+    let Some(container) = container else {
+        return card::filled(row(
+            app.container_none,
+            app.container_none_detail,
+            Space::new(),
+        ))
+        .padding(16)
+        .width(Length::Fill)
+        .into();
+    };
+
+    let tool = |label: &'static str, tool: &'static str| {
+        button::button(label, ButtonVariant::Outlined).on_press(Message::OpenTool(tool))
+    };
+
+    card::filled(
+        Column::new()
+            .push(row(
+                container.name.as_str(),
+                maltoria_core::create_bottle::display_bottle_location(&container.path),
+                button::icon_button("folder_open", button::IconButtonVariant::Standard)
+                    .on_press(Message::RevealContainer),
+            ))
+            .push(
+                Row::new()
+                    .push(tool(s().bottle.wine_config, "winecfg"))
+                    .push(tool(s().bottle.regedit, "regedit"))
+                    .push(tool(s().bottle.control_panel, "control"))
+                    .push(
+                        button::button(app.install_fonts, ButtonVariant::Text)
+                            .on_press(Message::InstallFonts),
+                    )
+                    .spacing(8)
+                    .wrap(),
+            )
+            .spacing(16),
+    )
+    .padding(16)
+    .width(Length::Fill)
+    .into()
+}
+
+fn folders(folders: Option<&FoldersDto>) -> material::Element<'_, Message> {
+    let app = &s().app;
+    let mut column = Column::new().spacing(8);
+
+    let roots = folders
+        .map(|folders| folders.roots.as_slice())
+        .unwrap_or_default();
+
+    if roots.is_empty() {
+        column = column.push(
+            material::text::type_scale(app.folders_empty, tokens::typography::BODY_MEDIUM)
+                .style(material::text::surface_variant),
+        );
+    }
+
+    for root in roots {
+        column = column.push(
+            Row::new()
+                .push(material::fonts::icon("folder", 24.0).style(material::text::surface_variant))
+                .push(
+                    material::text::type_scale(
+                        maltoria_core::create_bottle::display_bottle_location(root),
+                        tokens::typography::BODY_LARGE,
+                    )
+                    .width(Length::Fill),
+                )
+                .spacing(16)
+                .align_y(Alignment::Center),
+        );
+    }
+
+    card::filled(
+        Column::new()
+            .push(column)
+            .push(
+                Row::new()
+                    .push(
+                        button::button(app.add_folder, ButtonVariant::FilledTonal)
+                            .on_press(Message::AddFolder),
+                    )
+                    .push(button::button(app.rescan, ButtonVariant::Text).on_press(Message::Rescan))
+                    .spacing(8),
+            )
+            .spacing(16),
+    )
+    .padding(16)
+    .width(Length::Fill)
+    .into()
+}
+
+fn appearance(
+    selected: MaterialColor,
+    appearance: Appearance,
+) -> material::Element<'static, Message> {
+    let app = &s().app;
+    let count = Appearance::ALL.len();
+
+    let modes =
+        segmented_button::group(Appearance::ALL.iter().enumerate().map(|(index, &mode)| {
+            segmented_button::selectable_label(
+                mode.label(),
+                mode == appearance,
+                segmented_button::SegmentPosition::for_index(index, count),
+            )
+            .on_press(Message::SetAppearance(mode))
+            .into()
+        }));
+
+    let swatches = MaterialColor::ALL
+        .iter()
+        .fold(Row::new().spacing(12), |row, &color| {
+            row.push(swatch(color, color == selected))
+        });
+
+    card::filled(
+        Column::new()
+            .push(row(app.appearance_mode, "", modes))
+            .push(row(app.appearance_color, "", swatches))
+            .spacing(16),
+    )
+    .padding(16)
+    .width(Length::Fill)
+    .into()
+}
+
+const SWATCH_SIZE: f32 = 32.0;
+
+fn swatch(color: MaterialColor, selected: bool) -> material::Element<'static, Message> {
+    let fill = color.color_scheme(false).primary.color;
+    let mark: material::Element<'static, Message> = if selected {
+        material::fonts::icon("check", 20.0)
+            .style(move |_: &Theme| iced::widget::text::Style {
+                color: Some(color.color_scheme(false).primary.text),
+            })
+            .into()
+    } else {
+        Space::new().into()
+    };
+
+    iced_button(
+        container(mark)
+            .center_x(Length::Fixed(SWATCH_SIZE))
+            .center_y(Length::Fixed(SWATCH_SIZE)),
+    )
+    .padding(0)
+    .style(move |theme: &Theme, status| iced_button::Style {
+        background: Some(fill.into()),
+        border: iced::border::rounded(tokens::shape::CORNER_FULL)
+            .width(if selected { 2.0 } else { 0.0 })
+            .color(
+                if matches!(status, iced_button::Status::Hovered) || selected {
+                    theme.colors().surface.text
+                } else {
+                    fill
+                },
+            ),
+        ..iced_button::Style::default()
+    })
+    .on_press(Message::SelectColor(color))
+    .into()
+}
+
+fn about() -> material::Element<'static, Message> {
+    let dialogs = &s().dialogs;
+    let tagline = if cfg!(target_os = "macos") {
+        dialogs.about_tagline_mac
+    } else {
+        dialogs.about_tagline_linux
+    };
+
+    card::filled(
+        Column::new()
+            .push(row("Maltoria", tagline, Space::new()))
+            .push(row(
+                dialogs.about_version,
+                env!("CARGO_PKG_VERSION"),
+                Space::new(),
+            ))
+            .spacing(16),
+    )
+    .padding(16)
+    .width(Length::Fill)
+    .into()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn appearance_follows_the_remembered_dark_mode() {
+        for appearance in Appearance::ALL {
+            assert_eq!(
+                Appearance::from_dark_mode(appearance.dark_mode()),
+                appearance
+            );
+        }
+
+        assert_eq!(Appearance::from_dark_mode(None), Appearance::System);
+    }
+}
