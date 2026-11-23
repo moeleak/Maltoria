@@ -14,6 +14,7 @@ mod metadata;
 mod playing;
 mod pointer;
 mod prefs;
+mod removal;
 mod settings;
 mod wine;
 
@@ -113,8 +114,11 @@ pub enum Message {
     Stop(String),
     Reveal(String),
     SetHidden(String, bool),
+    /// Asks before the game leaves the library.
+    Remove(String),
+    RemoveConfirm,
+    RemoveDismiss,
     SetLocale(String),
-    AddFolder,
     AddProgram,
     Rescan,
     SyncMetadata,
@@ -164,6 +168,10 @@ pub struct App {
     /// The clipboard question a launch is waiting on, while it shows.
     clipboard: Option<maltoria_core::runtime::ClipboardPrompt>,
     clipboard_transition: dialog::Transition,
+    /// The game being asked about deleting, by id and title, while the
+    /// question shows.
+    removing: Option<(String, String)>,
+    removing_transition: dialog::Transition,
     library: library::State,
     /// The game whose details dialog is open, or closing.
     details: Option<String>,
@@ -177,7 +185,7 @@ pub struct App {
     /// Containers synced automatically this session.
     auto_synced: HashSet<String>,
     folders: Option<FoldersDto>,
-    /// Scan the folders again once the helper confirms the new ones.
+    /// Scan the folders again once the helper confirms a change to them.
     scan_after_folders: bool,
     /// Re-read the library once the helper confirms a pinned program.
     reload_after_pin: bool,
@@ -229,6 +237,8 @@ fn boot() -> (App, Task<Message>) {
         runtime: RuntimeTable::default(),
         clipboard: None,
         clipboard_transition: dialog::Transition::default(),
+        removing: None,
+        removing_transition: dialog::Transition::default(),
         library: library::State::default(),
         details: None,
         details_transition: dialog::Transition::default(),
@@ -295,6 +305,7 @@ fn subscription(app: &App) -> Subscription<Message> {
         || app.snackbar.is_active()
         || app.details_transition.is_animating()
         || app.clipboard_transition.is_animating()
+        || app.removing_transition.is_animating()
         || app.appearance.is_animating()
     {
         subscriptions.push(iced::window::frames().map(Message::Frame));
@@ -443,6 +454,36 @@ impl App {
         self.auto_synced.insert(container);
     }
 
+    /// Takes `id` out of the library: its card goes at once, and the
+    /// helper's reply has the library read again.
+    fn remove_game(&mut self, id: &str) {
+        let Some(removal) = self
+            .game(id)
+            .and_then(|game| removal::of(game, self.folders.as_ref()))
+        else {
+            return;
+        };
+
+        self.games.retain(|game| game.id != id);
+
+        if self.details.as_deref() == Some(id) {
+            self.details_transition.dismiss(Instant::now());
+        }
+
+        match removal {
+            removal::Removal::Unpin { path, name } => {
+                self.reload_after_pin = true;
+                self.with_container(|bridge, container| {
+                    bridge.set_program_pinned(container, &path, &name, false);
+                });
+            }
+            removal::Removal::Folder(edit) => {
+                self.scan_after_folders = true;
+                self.with_container(|bridge, container| bridge.edit_folders(container, edit));
+            }
+        }
+    }
+
     fn open_details(&mut self, id: String) {
         if self.details.as_deref() != Some(id.as_str()) {
             self.load_settings(&id);
@@ -512,6 +553,11 @@ fn update(app: &mut App, message: Message) -> Task<Message> {
             if !app.clipboard_transition.is_active() {
                 app.clipboard = None;
             }
+            let _ = app.removing_transition.advance(now);
+
+            if !app.removing_transition.is_active() {
+                app.removing = None;
+            }
             let _ = app.appearance.advance(now);
 
             // A dismissed dialog lets go of its game once it is gone.
@@ -575,7 +621,9 @@ fn update(app: &mut App, message: Message) -> Task<Message> {
         }
         Message::CloseDetails => app.details_transition.dismiss(Instant::now()),
         Message::Escape => {
-            if app.editor.is_some() {
+            if app.removing_transition.is_active() {
+                app.removing_transition.dismiss(Instant::now());
+            } else if app.editor.is_some() {
                 app.editor = None;
             } else if app.details_transition.is_active() {
                 app.details_transition.dismiss(Instant::now());
@@ -769,6 +817,19 @@ fn update(app: &mut App, message: Message) -> Task<Message> {
         Message::SetHidden(id, hidden) => {
             app.with_container(|bridge, container| bridge.set_hidden(container, &id, hidden));
         }
+        Message::Remove(id) => {
+            if let Some(game) = app.game(&id).filter(|game| removal::removable(game)) {
+                app.removing = Some((id, game.title.clone()));
+                app.removing_transition.show(Instant::now());
+            }
+        }
+        Message::RemoveConfirm => {
+            if let Some((id, _)) = app.removing.clone() {
+                app.remove_game(&id);
+            }
+            app.removing_transition.dismiss(Instant::now());
+        }
+        Message::RemoveDismiss => app.removing_transition.dismiss(Instant::now()),
         Message::SetLocale(locale) => {
             if let Some(settings) = app.library.settings.as_mut() {
                 settings.locale = locale;
@@ -783,21 +844,10 @@ fn update(app: &mut App, message: Message) -> Task<Message> {
                 });
             }
         }
-        Message::AddFolder => {
-            if let Some(bridge) = &app.bridge {
-                let home = std::env::var("HOME").unwrap_or_default();
-                bridge.choose_folders("scan-roots", &home);
-            }
-        }
         Message::AddProgram => {
-            app.with_container(|bridge, container| {
-                bridge.choose_path(
-                    "pin",
-                    "file",
-                    Some(&format!("{container}/drive_c")),
-                    None,
-                    &["exe"],
-                );
+            // The picker opens where the last game was picked.
+            app.with_container(|bridge, _| {
+                bridge.choose_path("pin", "file", None, None, &["exe"]);
             });
         }
         Message::Rescan => app.with_container(|bridge, container| bridge.start_scan(container)),
@@ -998,17 +1048,6 @@ fn bridge_event(app: &mut App, event: BridgeEvent) -> Task<Message> {
             }
             _ => {}
         },
-        BridgeEvent::FoldersChosen { purpose, paths } if purpose == "scan-roots" => {
-            let paths: Vec<String> = paths
-                .into_iter()
-                .filter(|path| path.starts_with('/'))
-                .collect();
-
-            if !paths.is_empty() {
-                app.scan_after_folders = true;
-                app.with_container(|bridge, container| bridge.add_scan_roots(container, &paths));
-            }
-        }
         BridgeEvent::Folders { container, folders } => {
             if app.container.as_deref() == Some(container.as_str()) {
                 app.folders = Some(folders);
@@ -1037,6 +1076,10 @@ fn bridge_event(app: &mut App, event: BridgeEvent) -> Task<Message> {
                 .map(|name| name.to_string_lossy().into_owned())
                 .unwrap_or_else(|| s().state.fallback_program.to_owned());
 
+            // A new game earns another automatic metadata pass.
+            if let Some(container) = &app.container {
+                app.auto_synced.remove(container);
+            }
             app.reload_after_pin = true;
             app.with_container(|bridge, container| {
                 bridge.set_program_pinned(container, &path, &name, true)
@@ -1095,6 +1138,25 @@ fn bridge_event(app: &mut App, event: BridgeEvent) -> Task<Message> {
 
             if selected.as_deref() == Some(settings.executable.as_str()) {
                 app.library.settings = Some(settings);
+            }
+        }
+        // What failed to change is read again, as it was.
+        BridgeEvent::ProgramFailed { reason, .. } => {
+            app.notify(reason);
+
+            if std::mem::take(&mut app.reload_after_pin)
+                && let Some(bridge) = &app.bridge
+            {
+                bridge.reload_library();
+            }
+        }
+        BridgeEvent::FoldersFailed { reason, .. } => {
+            app.notify(reason);
+
+            if std::mem::take(&mut app.scan_after_folders)
+                && let Some(bridge) = &app.bridge
+            {
+                bridge.reload_library();
             }
         }
         BridgeEvent::ActionFailed { reason }
@@ -1277,6 +1339,18 @@ fn view(app: &App) -> material::Element<'_, Message> {
         &app.details_transition,
         now,
         dialog,
+        dialog::ModalOptions::default().margin(tokens::component::dialog::WINDOW_MARGIN),
+    );
+
+    let removing = app.removing.as_ref().map_or_else(
+        || Space::new().into(),
+        |(_, title)| removal::dialog(title, app.removing_transition.alpha(now)),
+    );
+    let content = dialog::modal_animated_with(
+        content,
+        &app.removing_transition,
+        now,
+        removing,
         dialog::ModalOptions::default().margin(tokens::component::dialog::WINDOW_MARGIN),
     );
 

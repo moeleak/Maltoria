@@ -251,7 +251,7 @@ pub fn view<'a>(
         )
         .push(
             button::extended_fab_with_icon("add", s().app.add_game, button::FabVariant::Primary)
-                .on_press(Message::AddFolder),
+                .on_press(Message::AddProgram),
         )
         .spacing(16)
         .align_y(Alignment::Center);
@@ -404,13 +404,19 @@ fn cell<'a>(
         .item(if game.hidden {
             menu::item(s().library.unhide_game)
                 .icon("visibility")
-                .on_press(Message::SetHidden(id, false))
+                .on_press(Message::SetHidden(id.clone(), false))
         } else {
             menu::item(s().library.hide_game)
                 .icon("visibility_off")
                 .destructive()
-                .on_press(Message::SetHidden(id, true))
+                .on_press(Message::SetHidden(id.clone(), true))
         })
+        .item(
+            menu::item(s().app.remove_game)
+                .icon("delete")
+                .destructive()
+                .on_press_maybe(crate::removal::removable(game).then_some(Message::Remove(id))),
+        )
         .into()
 }
 
@@ -462,16 +468,7 @@ fn empty<'a>(
 
     if offer_add {
         column = column.push(
-            Row::new()
-                .push(
-                    button::button(s().app.add_folder, ButtonVariant::Filled)
-                        .on_press(Message::AddFolder),
-                )
-                .push(
-                    button::button(s().library.add_program_btn, ButtonVariant::Outlined)
-                        .on_press(Message::AddProgram),
-                )
-                .spacing(12),
+            button::button(s().app.add_game, ButtonVariant::Filled).on_press(Message::AddProgram),
         );
     }
 

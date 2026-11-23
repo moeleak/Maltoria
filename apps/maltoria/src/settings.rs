@@ -1,4 +1,5 @@
-//! Settings: the Wine runtime, the container, the game folders, and the look.
+//! Settings: the Wine runtime, the container, the game folders added before
+//! games were added by their executables, and the look.
 //!
 //! Only what a visual novel needs is here; the container's Wine tools cover
 //! the rest.
@@ -73,23 +74,36 @@ pub struct View<'a> {
 pub fn view(settings: View<'_>) -> material::Element<'_, Message> {
     let app = &s().app;
 
+    let mut sections: Vec<material::Element<'_, Message>> = vec![
+        page::section(
+            s().settings.runtime_title,
+            runtime(settings.setup, settings.install),
+        )
+        .into(),
+        page::section(app.container_section, container_section(settings.container)).into(),
+    ];
+
+    // Games are added by their executables; folders added before stay here
+    // until they are removed.
+    if settings
+        .folders
+        .is_some_and(|folders| !folders.roots.is_empty())
+    {
+        sections.push(page::section(app.folders_section, folders(settings.folders)).into());
+    }
+
+    sections.push(
+        page::section(
+            s().settings.appearance_label,
+            appearance(settings.color, settings.appearance),
+        )
+        .into(),
+    );
+    sections.push(page::section(s().dialogs.about_title, about()).into());
+
     page::surface(
         page::header(app.settings_title, app.settings_subtitle),
-        page::sections([
-            page::section(
-                s().settings.runtime_title,
-                runtime(settings.setup, settings.install),
-            )
-            .into(),
-            page::section(app.container_section, container_section(settings.container)).into(),
-            page::section(app.folders_section, folders(settings.folders)).into(),
-            page::section(
-                s().settings.appearance_label,
-                appearance(settings.color, settings.appearance),
-            )
-            .into(),
-            page::section(s().dialogs.about_title, about()).into(),
-        ]),
+        page::sections(sections),
     )
     .into()
 }
@@ -225,13 +239,6 @@ fn folders(folders: Option<&FoldersDto>) -> material::Element<'_, Message> {
         .map(|folders| folders.roots.as_slice())
         .unwrap_or_default();
 
-    if roots.is_empty() {
-        column = column.push(
-            material::text::type_scale(app.folders_empty, tokens::typography::BODY_MEDIUM)
-                .style(material::text::surface_variant),
-        );
-    }
-
     for root in roots {
         column = column.push(
             Row::new()
@@ -253,10 +260,6 @@ fn folders(folders: Option<&FoldersDto>) -> material::Element<'_, Message> {
             .push(column)
             .push(
                 Row::new()
-                    .push(
-                        button::button(app.add_folder, ButtonVariant::FilledTonal)
-                            .on_press(Message::AddFolder),
-                    )
                     .push(button::button(app.rescan, ButtonVariant::Text).on_press(Message::Rescan))
                     .spacing(8),
             )
