@@ -15,6 +15,7 @@ mod playing;
 mod pointer;
 mod prefs;
 mod settings;
+mod wine;
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -207,6 +208,11 @@ fn boot() -> (App, Task<Message>) {
         .copied()
         .unwrap_or(MaterialColor::Purple);
     let dark_mode = prefs.dark_mode.unwrap_or(false);
+
+    // Before the helper starts, which runs games with the installed runtime.
+    if !demo {
+        wine::install_carried();
+    }
 
     let mut app = App {
         bridge: (!demo).then(bridge::start),

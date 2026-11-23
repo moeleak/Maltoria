@@ -70,6 +70,10 @@ Docker 任务将内部构建记录放在 `<output>/task/`，最终应用位于 `
 
 ## Wine
 
+macOS 上，构建 `apps/maltoria` 时若设置 `MALTORIA_WINE_RUNTIME`（一个 Wine 运行库目录，即 `Libraries`），
+应用会自带这份运行库：每次启动、在 helper 启动之前，若已安装的版本（`WhiskyWineVersion.plist`）与它不同，
+就把它复制到 `~/Library/Application Support/com.daydalek.Maltoria/Libraries`。
+
 默认发现 Whisky 的同级 `ge-proton-macos-wine-poc` 仓库。
 可通过 `--wine-repo /path/to/wine-recipe` 或 `WHISKY_WINE_REPO` 设置路径。
 计划和构建会记录 Wine 配方仓库 commit，既有源码锁和下载哈希继续由 Wine 配方校验。
