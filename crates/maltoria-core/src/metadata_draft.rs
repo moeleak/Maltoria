@@ -119,6 +119,9 @@ impl MetadataDraft {
         self.record = record.clone();
         self.saved = self.record.clone();
         self.loaded = true;
+        // A record whose default source links nothing shows nothing; one of
+        // its links takes over, to be saved.
+        self.default_to_a_link();
         Ok(())
     }
 
@@ -197,14 +200,14 @@ impl MetadataDraft {
 
         // Search hits are summaries: linking the same work again must not
         // replace its fetched details, characters especially.
-        if self.binding(source) == Some(id.as_str())
-            && self.record["snapshots"][source]["sourceID"].as_str() == Some(id.as_str())
+        if self.binding(source) != Some(id.as_str())
+            || self.record["snapshots"][source]["sourceID"].as_str() != Some(id.as_str())
         {
-            return Ok(());
+            self.record["bindings"][source] = json!(id);
+            self.record["snapshots"][source] = snapshot;
         }
 
-        self.record["bindings"][source] = json!(id);
-        self.record["snapshots"][source] = snapshot;
+        self.follow(source);
         Ok(())
     }
 
@@ -215,14 +218,41 @@ impl MetadataDraft {
         if let Some(snapshots) = self.record["snapshots"].as_object_mut() {
             snapshots.remove(source);
         }
+
+        self.follow(source);
     }
 
-    /// Unlinks `source`.
+    /// Unlinks `source`; if it was the default, another link takes over.
     pub fn unbind(&mut self, source: &str) {
         for field in ["bindings", "snapshots"] {
             if let Some(map) = self.record[field].as_object_mut() {
                 map.remove(source);
             }
+        }
+
+        self.default_to_a_link();
+    }
+
+    /// The library shows the default source's data alone, so a link made
+    /// while the default links nothing becomes the default.
+    fn follow(&mut self, source: &str) {
+        if self.binding(self.source("default")).is_none() {
+            self.set_source("default", source);
+        }
+    }
+
+    /// Makes the first linked source the default, if the default links
+    /// nothing.
+    fn default_to_a_link(&mut self) {
+        if self.binding(self.source("default")).is_some() {
+            return;
+        }
+
+        if let Some(&source) = PROVIDERS
+            .iter()
+            .find(|source| self.binding(source).is_some())
+        {
+            self.set_source("default", source);
         }
     }
 
@@ -245,6 +275,56 @@ mod tests {
             }))
             .unwrap();
         draft
+    }
+
+    fn snapshot(source: &str, id: &str) -> Value {
+        json!({"source": source, "sourceID": id, "title": "WHITE ALBUM2"})
+    }
+
+    #[test]
+    fn a_link_becomes_the_default_when_the_default_links_nothing() {
+        let mut draft = MetadataDraft::searching("vndb");
+        draft
+            .accept_reply(&json!({"record": {"defaultSource": "bangumi"}, "capabilities": {}}))
+            .unwrap();
+
+        draft.bind("vndb", snapshot("vndb", "v7771")).unwrap();
+
+        assert_eq!(draft.source("default"), "vndb");
+    }
+
+    #[test]
+    fn a_linked_default_stays() {
+        let mut draft = loaded();
+
+        draft.bind("vndb", snapshot("vndb", "v7771")).unwrap();
+        draft.bind_id("ymgal", "30044");
+
+        assert_eq!(draft.source("default"), "bangumi");
+    }
+
+    #[test]
+    fn unlinking_the_default_hands_it_to_another_link() {
+        let mut draft = loaded();
+        draft.bind("vndb", snapshot("vndb", "v7771")).unwrap();
+
+        draft.unbind("bangumi");
+
+        assert_eq!(draft.source("default"), "vndb");
+    }
+
+    #[test]
+    fn a_default_linking_nothing_is_repaired_on_load() {
+        let mut draft = MetadataDraft::searching("vndb");
+        draft
+            .accept_reply(&json!({
+                "record": {"defaultSource": "bangumi", "bindings": {"vndb": "v7771"}},
+                "capabilities": {}
+            }))
+            .unwrap();
+
+        assert_eq!(draft.source("default"), "vndb");
+        assert!(draft.is_dirty());
     }
 
     #[test]
