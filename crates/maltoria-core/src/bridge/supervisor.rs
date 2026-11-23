@@ -264,6 +264,10 @@ pub enum MetadataUpdate {
         container: String,
         entry: crate::bridge::dto::EntryDto,
     },
+    /// `metadata.sync` could not start, or stopped before it finished.
+    SyncFailed {
+        reason: String,
+    },
     Failed {
         reason: String,
     },
@@ -2635,7 +2639,7 @@ fn run_with_spawner_and_backoff<F, B>(
                                 emit_event(
                                     &events,
                                     BridgeEvent::Metadata {
-                                        update: MetadataUpdate::Failed { reason },
+                                        update: MetadataUpdate::SyncFailed { reason },
                                     },
                                 );
                                 metadata_sync = None;
@@ -2644,7 +2648,7 @@ fn run_with_spawner_and_backoff<F, B>(
                                 emit_event(
                                     &events,
                                     BridgeEvent::Metadata {
-                                        update: MetadataUpdate::Failed { reason },
+                                        update: MetadataUpdate::SyncFailed { reason },
                                     },
                                 );
                                 metadata_sync = None;
@@ -4788,7 +4792,7 @@ fn run_with_spawner_and_backoff<F, B>(
                                 Err(error) => emit_event(
                                     &events,
                                     BridgeEvent::Metadata {
-                                        update: MetadataUpdate::Failed {
+                                        update: MetadataUpdate::SyncFailed {
                                             reason: format!("invalid sync reply: {error}"),
                                         },
                                     },
@@ -4797,7 +4801,7 @@ fn run_with_spawner_and_backoff<F, B>(
                             Err(CallFailure::Remote(reason)) => emit_event(
                                 &events,
                                 BridgeEvent::Metadata {
-                                    update: MetadataUpdate::Failed { reason },
+                                    update: MetadataUpdate::SyncFailed { reason },
                                 },
                             ),
                             Err(CallFailure::Session(reason)) => reconnect = Some(reason),
@@ -5337,7 +5341,7 @@ fn run_with_spawner_and_backoff<F, B>(
                     emit_event(
                         &events,
                         BridgeEvent::Metadata {
-                            update: MetadataUpdate::Failed {
+                            update: MetadataUpdate::SyncFailed {
                                 reason: "The bridge session ended; the sync was abandoned".into(),
                             },
                         },
