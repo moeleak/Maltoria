@@ -202,8 +202,7 @@ err_invalid_reply = "Мост вернул некорректную конфиг
 err_missing_platform_id = "В результате нет ID платформы, привязка невозможна"
 err_platform_mismatch = "Платформа результата не совпадает с источником поиска"
 err_invalid_id_or_url = "Введите корректный ID произведения или URL страницы выбранной платформы; привязка никогда не угадывает по названию."
-msg_id_staged = "ID платформы добавлен в черновик; сохраните и обновите для загрузки метаданных."
-msg_refreshed_by_id = "Обновлено по сохранённым ID платформ"
+msg_id_staged = "ID платформы добавлен в черновик; метаданные загрузятся при сохранении."
 msg_saved = "Метаданные сохранены"
 
 [onboarding]
@@ -243,7 +242,6 @@ clipboard_unknown_content = "неизвестное содержимое"
 clipboard_keep_launch = "Сохранить и запустить"
 clipboard_clear_launch = "Очистить и запустить"
 save_metadata = "Сохранить метаданные"
-refresh_bound_btn = "Обновить сохранённые привязки"
 clipboard_prompt_body = "Перед запуском в буфере обмена обнаружено: {content} ({size}). Wine может его прочитать — выберите, как поступить."
 
 graphics_backend = "Графический бэкенд"
@@ -422,6 +420,7 @@ setup_runtime_detail = "Maltoria запускает игры для Windows че
 setup_container_title = "Подготовка контейнера"
 setup_container_detail = "Все игры работают в одном контейнере, настроенном для японского и китайского текста."
 create_container = "Создать контейнер"
+refreshing_linked = "Обновление связанных метаданных…"
 
 [maps.provider_label]
 "anthropic" = "Anthropic"

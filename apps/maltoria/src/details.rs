@@ -174,10 +174,12 @@ pub fn view<'a>(
             ..iced::Padding::ZERO
         }),
         dialog::actions([
-            dialog::action_with(s().library.game_info_cover_ellipsis, options)
+            dialog::action_with_icon("edit", s().library.game_info_cover_ellipsis, options)
                 .on_press(Message::OpenEditor(game.id.clone()))
                 .into(),
-            dialog::action_button_with(s().common.close, Message::CloseDetails, options),
+            dialog::action_with_icon("close", s().common.close, options)
+                .on_press(Message::CloseDetails)
+                .into(),
             dialog::action_with_icon(library::action_icon(&primary), primary.label, options)
                 .on_press_maybe(library::action_message(primary.action, game))
                 .into(),

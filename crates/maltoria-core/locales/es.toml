@@ -202,8 +202,7 @@ err_invalid_reply = "El puente devolvió una configuración de metadatos no vál
 err_missing_platform_id = "El resultado no tiene ID de plataforma y no puede vincularse de forma segura"
 err_platform_mismatch = "La plataforma del resultado no coincide con la fuente de la búsqueda"
 err_invalid_id_or_url = "Introduce un ID de título o URL de página válidos para la plataforma seleccionada; la vinculación nunca adivina por título."
-msg_id_staged = "ID de plataforma preparado; guarda y actualiza para obtener metadatos."
-msg_refreshed_by_id = "Actualizado desde los ID de plataforma guardados"
+msg_id_staged = "ID de plataforma preparado; al guardar se obtienen los metadatos."
 msg_saved = "Metadatos guardados"
 
 [onboarding]
@@ -243,7 +242,6 @@ clipboard_unknown_content = "contenido desconocido"
 clipboard_keep_launch = "Conservar e iniciar"
 clipboard_clear_launch = "Borrar e iniciar"
 save_metadata = "Guardar metadatos"
-refresh_bound_btn = "Actualizar vínculos guardados"
 clipboard_prompt_body = "Se detectó {content} ({size}) en el portapapeles antes del inicio. Wine podría leerlo; elige cómo proceder."
 
 graphics_backend = "Backend de gráficos"
@@ -422,6 +420,7 @@ setup_runtime_detail = "Maltoria ejecuta los juegos de Windows con su propio Win
 setup_container_title = "Preparando el contenedor"
 setup_container_detail = "Todos los juegos se ejecutan en un mismo contenedor, configurado para texto en japonés y chino."
 create_container = "Crear contenedor"
+refreshing_linked = "Actualizando los metadatos vinculados…"
 
 [maps.provider_label]
 "anthropic" = "Anthropic"

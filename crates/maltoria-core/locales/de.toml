@@ -202,8 +202,7 @@ err_invalid_reply = "Bridge lieferte ungültige Metadatenkonfiguration; Entwurf 
 err_missing_platform_id = "Ergebnis fehlt die Plattform-ID und kann nicht sicher verknüpft werden"
 err_platform_mismatch = "Ergebnisplattform stimmt nicht mit der Suchquelle überein"
 err_invalid_id_or_url = "Gültige Werk-ID oder Seiten-URL für die gewählte Plattform eingeben; die Verknüpfung rät nie anhand des Titels."
-msg_id_staged = "Plattform-ID vorgemerkt; speichern und aktualisieren, um Metadaten abzurufen."
-msg_refreshed_by_id = "Aus gespeicherten Plattform-IDs aktualisiert"
+msg_id_staged = "Plattform-ID vorgemerkt; beim Speichern werden die Metadaten abgerufen."
 msg_saved = "Metadaten gespeichert"
 
 [onboarding]
@@ -243,7 +242,6 @@ clipboard_unknown_content = "unbekannter Inhalt"
 clipboard_keep_launch = "Behalten & Starten"
 clipboard_clear_launch = "Leeren & Starten"
 save_metadata = "Metadaten speichern"
-refresh_bound_btn = "Gespeicherte Verknüpfungen aktualisieren"
 clipboard_prompt_body = "Vor dem Start wurde {content} ({size}) in der Zwischenablage erkannt. Wine könnte es lesen — wähle, wie du fortfährst."
 
 graphics_backend = "Grafik-Backend"
@@ -422,6 +420,7 @@ setup_runtime_detail = "Maltoria startet Windows-Spiele mit einem eigenen Wine. 
 setup_container_title = "Container wird vorbereitet"
 setup_container_detail = "Alle Spiele laufen in einem Container, der für japanischen und chinesischen Text eingerichtet ist."
 create_container = "Container erstellen"
+refreshing_linked = "Verknüpfte Metadaten werden aktualisiert…"
 
 [maps.provider_label]
 "anthropic" = "Anthropic"

@@ -202,8 +202,7 @@ err_invalid_reply = "Bridge returned invalid metadata config; draft kept"
 err_missing_platform_id = "Result is missing platform ID and cannot be safely bound"
 err_platform_mismatch = "Result platform does not match search source"
 err_invalid_id_or_url = "Enter a valid work ID or page URL for the selected platform; binding never guesses by title."
-msg_id_staged = "Platform ID staged; save and refresh to fetch metadata."
-msg_refreshed_by_id = "Refreshed from saved platform IDs"
+msg_id_staged = "Platform ID staged; saving fetches its metadata."
 msg_saved = "Metadata saved"
 
 [onboarding]
@@ -243,7 +242,6 @@ clipboard_unknown_content = "unknown content"
 clipboard_keep_launch = "Keep & Launch"
 clipboard_clear_launch = "Clear & Launch"
 save_metadata = "Save Metadata"
-refresh_bound_btn = "Refresh Saved Bindings"
 clipboard_prompt_body = "Detected {content} ({size}) in the clipboard before launch. Wine may read it — choose how to proceed."
 
 graphics_backend = "Graphics Backend"
@@ -422,6 +420,7 @@ setup_runtime_detail = "Maltoria runs Windows games with its own Wine. It is dow
 setup_container_title = "Preparing your container"
 setup_container_detail = "Every game runs in one container, set up for Japanese and Chinese text."
 create_container = "Create Container"
+refreshing_linked = "Refreshing linked metadata…"
 
 [maps.provider_label]
 "anthropic" = "Anthropic"

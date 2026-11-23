@@ -202,8 +202,7 @@ err_invalid_reply = "桥接服务返回了无效的资料配置；未覆盖草�
 err_missing_platform_id = "此结果缺少平台 ID，无法安全关联"
 err_platform_mismatch = "结果的平台与搜索来源不一致"
 err_invalid_id_or_url = "请输入所选平台的作品 ID 或作品页面网址；关联不会按标题猜测。"
-msg_id_staged = "平台 ID 已加入草稿；保存后刷新以获取资料。"
-msg_refreshed_by_id = "已按保存的平台 ID 刷新"
+msg_id_staged = "平台 ID 已加入草稿；保存时获取资料。"
 msg_saved = "资料已保存"
 
 [onboarding]
@@ -243,7 +242,6 @@ clipboard_unknown_content = "未知内容"
 clipboard_keep_launch = "保留并启动"
 clipboard_clear_launch = "清空并启动"
 save_metadata = "保存资料"
-refresh_bound_btn = "刷新已保存的关联"
 clipboard_prompt_body = "启动前检测到剪贴板中有 {content}（{size}）。Wine 可能读取剪贴板，请选择如何处理。"
 
 graphics_backend = "图形后端"
@@ -422,6 +420,7 @@ setup_runtime_detail = "Maltoria 用自带的 Wine 运行 Windows 游戏。只�
 setup_container_title = "正在准备容器"
 setup_container_detail = "所有游戏都在同一个容器里运行，已为中日文显示做好设置。"
 create_container = "创建容器"
+refreshing_linked = "正在刷新已关联的资料…"
 
 [maps.provider_label]
 "anthropic" = "Anthropic"

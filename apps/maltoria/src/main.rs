@@ -133,7 +133,6 @@ pub enum Message {
     EditorLinkById,
     EditorUnlink(String),
     EditorSave,
-    EditorRefresh,
     ChooseCover(String),
     ResetCover(String),
     // Settings.
@@ -645,8 +644,8 @@ fn update(app: &mut App, message: Message) -> Task<Message> {
         Message::Escape => {
             if app.removing_transition.is_active() {
                 app.removing_transition.dismiss(Instant::now());
-            } else if app.editor.is_some() {
-                app.editor = None;
+            } else if app.editor.is_some() && app.details_transition.is_active() {
+                return update(app, Message::CloseEditor);
             } else if app.details_transition.is_active() {
                 app.details_transition.dismiss(Instant::now());
             }
@@ -663,8 +662,13 @@ fn update(app: &mut App, message: Message) -> Task<Message> {
         Message::OpenEditor(id) => {
             let preferences = app.metadata_preferences.clone().unwrap_or_default();
 
+            // From the game's details, closing the editor goes back to them;
+            // from the library, it closes the dialog.
+            let returns_to_details =
+                app.details.as_deref() == Some(id.as_str()) && app.details_transition.is_active();
+
             if let Some(game) = app.game(&id) {
-                let editor = metadata::Editor::new(game, &preferences);
+                let editor = metadata::Editor::new(game, &preferences, returns_to_details);
                 let generation = editor.draft.generation;
 
                 app.with_container(|bridge, container| {
@@ -674,7 +678,18 @@ fn update(app: &mut App, message: Message) -> Task<Message> {
                 app.open_details(id);
             }
         }
-        Message::CloseEditor => app.editor = None,
+        Message::CloseEditor => {
+            if app
+                .editor
+                .as_ref()
+                .is_some_and(|editor| editor.returns_to_details)
+            {
+                app.editor = None;
+            } else {
+                // The editor fades out with the dialog, and goes once it has.
+                app.details_transition.dismiss(Instant::now());
+            }
+        }
         Message::EditorQuery(query) => {
             if let Some(editor) = app.editor.as_mut() {
                 editor.query = query;
@@ -751,7 +766,7 @@ fn update(app: &mut App, message: Message) -> Task<Message> {
                 editor.draft.unbind(&source);
             }
         }
-        Message::EditorSave | Message::EditorRefresh => {
+        Message::EditorSave => {
             let enabled = app
                 .metadata_preferences
                 .as_ref()
@@ -759,22 +774,15 @@ fn update(app: &mut App, message: Message) -> Task<Message> {
                 .unwrap_or_default();
 
             if let Some(editor) = app.editor.as_mut() {
-                let (operation, record, sources) = if matches!(message, Message::EditorSave) {
-                    (
-                        "save",
-                        Some(editor.draft.record.clone()),
-                        editor.draft.policy_sources(enabled),
-                    )
-                } else {
-                    let bound = editor
-                        .bindings()
-                        .into_iter()
-                        .map(|(source, _)| source.to_owned())
-                        .collect();
-                    ("refresh", None, bound)
-                };
+                let (operation, record, sources) = (
+                    "save",
+                    Some(editor.draft.record.clone()),
+                    editor.draft.policy_sources(enabled),
+                );
 
                 editor.busy = true;
+                // The save's reply is newer than a refresh still running.
+                editor.refreshing = false;
                 editor.message = None;
 
                 let (id, generation) = (editor.game_id.clone(), editor.draft.generation);
@@ -1230,6 +1238,44 @@ fn metadata_event(app: &mut App, update: MetadataUpdate) -> Task<Message> {
                 return Task::none();
             };
 
+            // The background refresh that opening the editor starts: its
+            // record replaces the draft's only while nothing was changed or
+            // saved meanwhile.
+            if operation == "refresh" {
+                let current = std::mem::take(&mut editor.refreshing);
+
+                match result {
+                    Ok(reply) => {
+                        let errors: Vec<&str> = reply["errors"]
+                            .as_object()
+                            .into_iter()
+                            .flat_map(|errors| errors.values())
+                            .filter_map(serde_json::Value::as_str)
+                            .collect();
+
+                        if current
+                            && !editor.draft.is_dirty()
+                            && let Err(error) = editor.draft.accept_reply(&reply)
+                        {
+                            editor.message = Some(error);
+                        } else if !errors.is_empty() && editor.message.is_none() {
+                            editor.message = Some(errors.join("\n"));
+                        }
+                    }
+                    Err(reason) => {
+                        if editor.message.is_none() {
+                            editor.message = Some(reason);
+                        }
+                    }
+                }
+
+                if let Some(bridge) = &app.bridge {
+                    bridge.load_entries(&container);
+                }
+
+                return Task::none();
+            }
+
             editor.busy = false;
 
             match result {
@@ -1245,11 +1291,29 @@ fn metadata_event(app: &mut App, update: MetadataUpdate) -> Task<Message> {
                         Err(error) => Some(error),
                         Ok(()) if !errors.is_empty() => Some(errors.join("\n")),
                         Ok(()) if operation == "save" => Some(s().metadata.msg_saved.to_owned()),
-                        Ok(()) if operation == "refresh" => {
-                            Some(s().metadata.msg_refreshed_by_id.to_owned())
-                        }
                         Ok(()) => None,
                     };
+
+                    // The saved links are fetched again once the record is in.
+                    let refresh = (operation == "get" && editor.draft.loaded)
+                        .then(|| editor.refresh_sources())
+                        .flatten();
+
+                    if let Some(sources) = refresh {
+                        editor.refreshing = true;
+
+                        let id = editor.game_id.clone();
+                        if let Some(bridge) = &app.bridge {
+                            bridge.metadata_record(
+                                &container,
+                                &id,
+                                generation,
+                                "refresh",
+                                None,
+                                Some(sources),
+                            );
+                        }
+                    }
 
                     if operation != "get"
                         && let Some(bridge) = &app.bridge

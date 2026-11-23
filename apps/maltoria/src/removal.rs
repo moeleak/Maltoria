@@ -74,8 +74,12 @@ pub fn dialog<'a>(title: &str, alpha: f32) -> material::Element<'a, Message> {
         s().app.remove_game_title(title),
         s().app.remove_game_detail,
         dialog::actions([
-            dialog::action_button_with(s().common.cancel, Message::RemoveDismiss, options),
-            dialog::action_button_with(s().common.delete, Message::RemoveConfirm, options),
+            dialog::action_with_icon("close", s().common.cancel, options)
+                .on_press(Message::RemoveDismiss)
+                .into(),
+            dialog::action_with_icon("delete", s().common.delete, options)
+                .on_press(Message::RemoveConfirm)
+                .into(),
         ]),
         dialog::AlertOptions::default().icon("delete").alpha(alpha),
     )

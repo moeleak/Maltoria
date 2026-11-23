@@ -81,21 +81,15 @@ pub fn clipboard_dialog<'a>(
         strings.clipboard_title,
         strings.clipboard_prompt_body(&content, &clipboard_size(prompt.size_bytes)),
         dialog::actions([
-            dialog::action_button_with(
-                maltoria_core::i18n::s().common.cancel,
-                Message::ClipboardDismiss,
-                options,
-            ),
-            dialog::action_button_with(
-                strings.clipboard_keep_launch,
-                Message::ClipboardDecide(ClipboardDecision::Keep),
-                options,
-            ),
-            dialog::action_button_with(
-                strings.clipboard_clear_launch,
-                Message::ClipboardDecide(ClipboardDecision::Clear),
-                options,
-            ),
+            dialog::action_with_icon("close", maltoria_core::i18n::s().common.cancel, options)
+                .on_press(Message::ClipboardDismiss)
+                .into(),
+            dialog::action_with_icon("content_paste", strings.clipboard_keep_launch, options)
+                .on_press(Message::ClipboardDecide(ClipboardDecision::Keep))
+                .into(),
+            dialog::action_with_icon("content_paste_off", strings.clipboard_clear_launch, options)
+                .on_press(Message::ClipboardDecide(ClipboardDecision::Clear))
+                .into(),
         ]),
         dialog::AlertOptions::default()
             .icon("content_paste")

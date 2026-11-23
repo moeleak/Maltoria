@@ -3,7 +3,8 @@
 //!
 //! The helper does the fetching. A sync matches every game it can; the editor
 //! links a game to a platform's work by its ID, which saving commits and the
-//! helper then fetches. A local image can replace the cover at once.
+//! helper then fetches. Opening the editor fetches the saved links again, in
+//! the background. A local image can replace the cover at once.
 
 use iced::widget::{Column, Row, container, text};
 use iced::{Alignment, Length};
@@ -51,14 +52,18 @@ pub struct Editor {
     pub link: String,
     pub results: Vec<MetadataCandidate>,
     pub searching: bool,
-    /// A save or refresh is running.
+    /// A save is running.
     pub busy: bool,
+    /// The saved links are being fetched again.
+    pub refreshing: bool,
+    /// Opened from the game's details, which closing it returns to.
+    pub returns_to_details: bool,
     pub message: Option<String>,
 }
 
 impl Editor {
     /// An editor for `game`, searching its title on the default source.
-    pub fn new(game: &Game, preferences: &MetadataPreferences) -> Self {
+    pub fn new(game: &Game, preferences: &MetadataPreferences, returns_to_details: bool) -> Self {
         Self {
             game_id: game.id.clone(),
             draft: MetadataDraft::searching(&preferences.default_source),
@@ -67,6 +72,8 @@ impl Editor {
             results: Vec::new(),
             searching: false,
             busy: false,
+            refreshing: false,
+            returns_to_details,
             message: None,
         }
     }
@@ -105,6 +112,18 @@ impl Editor {
             .filter_map(|source| Some((*source, self.draft.binding(source)?)))
             .collect()
     }
+
+    /// The sources to fetch again once the saved record is loaded: its
+    /// links, if it has any.
+    pub fn refresh_sources(&self) -> Option<Vec<String>> {
+        let sources: Vec<String> = self
+            .bindings()
+            .into_iter()
+            .map(|(source, _)| source.to_owned())
+            .collect();
+
+        (!sources.is_empty()).then_some(sources)
+    }
 }
 
 /// The widest the editor dialog gets.
@@ -128,8 +147,12 @@ pub fn view<'a>(
 
     let status = if editor.busy || !editor.draft.loaded {
         Some(s().common.processing.to_owned())
-    } else {
+    } else if editor.message.is_some() {
         editor.message.clone()
+    } else {
+        editor
+            .refreshing
+            .then(|| s().app.refreshing_linked.to_owned())
     };
 
     if let Some(status) = status {
@@ -141,6 +164,11 @@ pub fn view<'a>(
     }
 
     let ready = editor.draft.loaded && !editor.busy;
+    let (dismiss_icon, dismiss) = if editor.returns_to_details {
+        ("arrow_back", s().common.back)
+    } else {
+        ("close", s().common.close)
+    };
 
     dialog::content_with_max_width(
         dialogs.sheet_game_info,
@@ -149,13 +177,10 @@ pub fn view<'a>(
             ..iced::Padding::ZERO
         }),
         dialog::actions([
-            dialog::action_button_with(s().common.back, Message::CloseEditor, options),
-            dialog::action_with(dialogs.refresh_bound_btn, options)
-                .on_press_maybe(
-                    (ready && !editor.bindings().is_empty()).then_some(Message::EditorRefresh),
-                )
+            dialog::action_with_icon(dismiss_icon, dismiss, options)
+                .on_press(Message::CloseEditor)
                 .into(),
-            dialog::action_with(dialogs.save_metadata, options)
+            dialog::action_with_icon("save", dialogs.save_metadata, options)
                 .on_press_maybe((ready && editor.draft.is_dirty()).then_some(Message::EditorSave))
                 .into(),
         ]),
@@ -221,7 +246,8 @@ fn search<'a>(
                 .width(Length::Fill),
         )
         .push(
-            dialog::action_with(
+            dialog::action_with_icon(
+                "search",
                 if editor.searching {
                     s().common.searching
                 } else {
@@ -243,7 +269,7 @@ fn search<'a>(
                 .width(Length::Fill),
         )
         .push(
-            dialog::action_with(dialogs.link_to_draft, options).on_press_maybe(
+            dialog::action_with_icon("link", dialogs.link_to_draft, options).on_press_maybe(
                 (!editor.link.trim().is_empty()).then_some(Message::EditorLinkById),
             ),
         )
@@ -298,9 +324,10 @@ fn result<'a>(
 
     let options = dialog::AlphaOptions::default().alpha(alpha);
     let action = if editor.is_linked(candidate) {
-        dialog::action_with(s().dialogs.in_draft, options)
+        dialog::action_with_icon("check", s().dialogs.in_draft, options)
     } else {
-        dialog::action_with(s().dialogs.link_to_draft, options).on_press(Message::EditorLink(index))
+        dialog::action_with_icon("link", s().dialogs.link_to_draft, options)
+            .on_press(Message::EditorLink(index))
     };
 
     Row::new()
@@ -382,11 +409,10 @@ fn linked(editor: &Editor, alpha: f32) -> material::Element<'_, Message> {
                     )
                     .width(Length::Fill),
                 )
-                .push(dialog::action_button_with(
-                    dialogs.unlink,
-                    Message::EditorUnlink(source.to_owned()),
-                    options,
-                ))
+                .push(
+                    dialog::action_with_icon("link_off", dialogs.unlink, options)
+                        .on_press(Message::EditorUnlink(source.to_owned())),
+                )
                 .align_y(Alignment::Center),
         );
     }
@@ -406,16 +432,18 @@ fn cover(editor: &Editor, alpha: f32) -> material::Element<'_, Message> {
         ))
         .push(
             Row::new()
-                .push(dialog::action_button_with(
-                    dialogs.choose_local_image,
-                    Message::ChooseCover(editor.game_id.clone()),
-                    options,
-                ))
-                .push(dialog::action_button_with(
-                    dialogs.reset_to_default_cover,
-                    Message::ResetCover(editor.game_id.clone()),
-                    options,
-                ))
+                .push(
+                    dialog::action_with_icon("image", dialogs.choose_local_image, options)
+                        .on_press(Message::ChooseCover(editor.game_id.clone())),
+                )
+                .push(
+                    dialog::action_with_icon(
+                        "restart_alt",
+                        dialogs.reset_to_default_cover,
+                        options,
+                    )
+                    .on_press(Message::ResetCover(editor.game_id.clone())),
+                )
                 .spacing(8),
         )
         .spacing(12)
@@ -458,7 +486,7 @@ mod tests {
 
     #[test]
     fn results_keep_the_current_source_and_report_its_errors() {
-        let mut editor = Editor::new(&game(true, None), &MetadataPreferences::default());
+        let mut editor = Editor::new(&game(true, None), &MetadataPreferences::default(), true);
         editor.draft.search_source = "vndb".into();
 
         editor.accept_results(vec![
@@ -496,6 +524,19 @@ mod tests {
         }]);
         assert!(editor.results.is_empty());
         assert_eq!(editor.message.as_deref(), Some("rate limited"));
+    }
+
+    #[test]
+    fn only_linked_records_are_fetched_again() {
+        let mut editor = Editor::new(&game(true, None), &MetadataPreferences::default(), false);
+        assert_eq!(editor.refresh_sources(), None);
+
+        editor.draft.bind_id("vndb", "v211");
+        editor.draft.bind_id("bangumi", "51");
+        assert_eq!(
+            editor.refresh_sources(),
+            Some(vec!["bangumi".to_owned(), "vndb".to_owned()])
+        );
     }
 
     #[test]
