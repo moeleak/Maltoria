@@ -6,6 +6,8 @@
 //! - `page library`, `page activity`, `page settings` opens a page;
 //! - `select <title>` opens the details of the first game whose title
 //!   contains `<title>`; `close` closes them;
+//! - `edit <title>` opens that game's metadata editor, from its details if
+//!   they are open, as from the library otherwise;
 //! - `shot <name>` saves the window as `<name>.png`;
 //! - `dismiss <name> <ms>` closes the details and saves the window `<ms>`
 //!   milliseconds into their fade.
@@ -29,6 +31,7 @@ const POLL: Duration = Duration::from_millis(500);
 pub enum Request {
     Page(Page),
     Select(String),
+    Edit(String),
     Close,
     Shot(String),
     /// Closes the details, and saves the window `after` into the fade.
@@ -87,6 +90,7 @@ pub fn parse(line: &str) -> Option<Request> {
             _ => None,
         },
         "select" if !argument.is_empty() => Some(Request::Select(argument.to_owned())),
+        "edit" if !argument.is_empty() => Some(Request::Edit(argument.to_owned())),
         "close" => Some(Request::Close),
         "dismiss" => {
             let (name, after) = argument.split_once(' ')?;
@@ -139,6 +143,7 @@ mod tests {
             parse("  select  WHITE ALBUM2 "),
             Some(Request::Select("WHITE ALBUM2".into()))
         );
+        assert_eq!(parse("edit WHITE"), Some(Request::Edit("WHITE".into())));
         assert_eq!(parse("close"), Some(Request::Close));
         assert_eq!(
             parse("shot details-1"),
@@ -155,6 +160,7 @@ mod tests {
         assert_eq!(parse("dismiss fade soon"), None);
         assert_eq!(parse("page elsewhere"), None);
         assert_eq!(parse("select"), None);
+        assert_eq!(parse("edit"), None);
         assert_eq!(parse(""), None);
     }
 }

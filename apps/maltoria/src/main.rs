@@ -937,6 +937,17 @@ fn dev_requests(app: &mut App) -> Task<Message> {
                     tasks.push(update(app, Message::OpenDetails(id)));
                 }
             }
+            dev::Request::Edit(title) => {
+                let id = app
+                    .games
+                    .iter()
+                    .find(|game| game.title.contains(&title))
+                    .map(|game| game.id.clone());
+
+                if let Some(id) = id {
+                    tasks.push(update(app, Message::OpenEditor(id)));
+                }
+            }
             dev::Request::Close => tasks.push(update(app, Message::CloseDetails)),
             dev::Request::Dismiss { name, after } => {
                 tasks.push(update(app, Message::CloseDetails));
