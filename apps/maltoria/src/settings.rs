@@ -9,7 +9,7 @@ use maltoria_core::bridge::dto::{Container, FoldersDto, SetupStatusDto};
 use maltoria_core::i18n::s;
 use material::widget::button::{self, ButtonVariant};
 use material::widget::theme_picker::MaterialColor;
-use material::widget::{card, page, progress_bar, segmented_button};
+use material::widget::{page, progress_bar, segmented_button};
 use material::{Theme, tokens};
 use material_ui_rs as material;
 
@@ -66,7 +66,8 @@ pub struct View<'a> {
     pub container: Option<&'a Container>,
     pub folders: Option<&'a FoldersDto>,
     pub color: MaterialColor,
-    pub appearance: Appearance,
+    /// The appearance's segmented button, whose selection animates.
+    pub appearance: &'a segmented_button::State,
 }
 
 pub fn view(settings: View<'_>) -> material::Element<'_, Message> {
@@ -80,7 +81,7 @@ pub fn view(settings: View<'_>) -> material::Element<'_, Message> {
                 runtime(settings.setup, settings.install),
             )
             .into(),
-            page::section(app.container_section, container_card(settings.container)).into(),
+            page::section(app.container_section, container_section(settings.container)).into(),
             page::section(app.folders_section, folders(settings.folders)).into(),
             page::section(
                 s().settings.appearance_label,
@@ -141,7 +142,7 @@ fn runtime<'a>(
             None => progress_bar::linear(progress_bar::LinearProgressMode::indeterminate(0.0)),
         };
 
-        return card::filled(
+        return container(
             Column::new()
                 .push(row(
                     app.runtime_installing,
@@ -151,7 +152,6 @@ fn runtime<'a>(
                 .push(bar)
                 .spacing(12),
         )
-        .padding(16)
         .width(Length::Fill)
         .into();
     }
@@ -178,55 +178,43 @@ fn runtime<'a>(
         ),
     };
 
-    card::filled(row(app.runtime_name, detail, action))
-        .padding(16)
+    container(row(app.runtime_name, detail, action))
         .width(Length::Fill)
         .into()
 }
 
-fn container_card(container: Option<&Container>) -> material::Element<'_, Message> {
+fn container_section(current: Option<&Container>) -> material::Element<'_, Message> {
     let app = &s().app;
 
-    let Some(container) = container else {
-        return card::filled(row(
-            app.container_none,
-            app.container_none_detail,
-            Space::new(),
-        ))
-        .padding(16)
-        .width(Length::Fill)
-        .into();
+    let Some(current) = current else {
+        return row(app.container_none, app.container_none_detail, Space::new());
     };
 
     let tool = |label: &'static str, tool: &'static str| {
         button::button(label, ButtonVariant::Outlined).on_press(Message::OpenTool(tool))
     };
 
-    card::filled(
-        Column::new()
-            .push(row(
-                container.name.as_str(),
-                maltoria_core::create_bottle::display_bottle_location(&container.path),
-                button::icon_button("folder_open", button::IconButtonVariant::Standard)
-                    .on_press(Message::RevealContainer),
-            ))
-            .push(
-                Row::new()
-                    .push(tool(s().bottle.wine_config, "winecfg"))
-                    .push(tool(s().bottle.regedit, "regedit"))
-                    .push(tool(s().bottle.control_panel, "control"))
-                    .push(
-                        button::button(app.install_fonts, ButtonVariant::Text)
-                            .on_press(Message::InstallFonts),
-                    )
-                    .spacing(8)
-                    .wrap(),
-            )
-            .spacing(16),
-    )
-    .padding(16)
-    .width(Length::Fill)
-    .into()
+    Column::new()
+        .push(row(
+            current.name.as_str(),
+            maltoria_core::create_bottle::display_bottle_location(&current.path),
+            button::icon_button("folder_open", button::IconButtonVariant::Standard)
+                .on_press(Message::RevealContainer),
+        ))
+        .push(
+            Row::new()
+                .push(tool(s().bottle.wine_config, "winecfg"))
+                .push(tool(s().bottle.regedit, "regedit"))
+                .push(tool(s().bottle.control_panel, "control"))
+                .push(
+                    button::button(app.install_fonts, ButtonVariant::Text)
+                        .on_press(Message::InstallFonts),
+                )
+                .spacing(8)
+                .wrap(),
+        )
+        .spacing(16)
+        .into()
 }
 
 fn folders(folders: Option<&FoldersDto>) -> material::Element<'_, Message> {
@@ -260,7 +248,7 @@ fn folders(folders: Option<&FoldersDto>) -> material::Element<'_, Message> {
         );
     }
 
-    card::filled(
+    container(
         Column::new()
             .push(column)
             .push(
@@ -274,28 +262,20 @@ fn folders(folders: Option<&FoldersDto>) -> material::Element<'_, Message> {
             )
             .spacing(16),
     )
-    .padding(16)
     .width(Length::Fill)
     .into()
 }
 
 fn appearance(
     selected: MaterialColor,
-    appearance: Appearance,
+    appearance: &segmented_button::State,
 ) -> material::Element<'static, Message> {
     let app = &s().app;
-    let count = Appearance::ALL.len();
 
-    let modes =
-        segmented_button::group(Appearance::ALL.iter().enumerate().map(|(index, &mode)| {
-            segmented_button::selectable_label(
-                mode.label(),
-                mode == appearance,
-                segmented_button::SegmentPosition::for_index(index, count),
-            )
-            .on_press(Message::SetAppearance(mode))
-            .into()
-        }));
+    let modes = segmented_button::group(segmented_button::animated_label_actions(
+        appearance,
+        Appearance::ALL.map(|mode| (mode.label(), Message::SetAppearance(mode))),
+    ));
 
     let swatches = MaterialColor::ALL
         .iter()
@@ -303,13 +283,12 @@ fn appearance(
             row.push(swatch(color, color == selected))
         });
 
-    card::filled(
+    container(
         Column::new()
             .push(row(app.appearance_mode, "", modes))
             .push(row(app.appearance_color, "", swatches))
             .spacing(16),
     )
-    .padding(16)
     .width(Length::Fill)
     .into()
 }
@@ -359,7 +338,7 @@ fn about() -> material::Element<'static, Message> {
         dialogs.about_tagline_linux
     };
 
-    card::filled(
+    container(
         Column::new()
             .push(row("Maltoria", tagline, Space::new()))
             .push(row(
@@ -369,7 +348,6 @@ fn about() -> material::Element<'static, Message> {
             ))
             .spacing(16),
     )
-    .padding(16)
     .width(Length::Fill)
     .into()
 }

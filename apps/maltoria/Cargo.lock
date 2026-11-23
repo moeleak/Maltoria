@@ -1894,6 +1894,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "iced",
+ "image",
  "maltoria-core",
  "material-ui-rs",
  "serde",
@@ -1917,7 +1918,7 @@ dependencies = [
 [[package]]
 name = "material-ui-rs"
 version = "0.5.3"
-source = "git+https://github.com/moeleak/material-ui-rs.git?branch=feat%2Flauncher-widgets#f7a7f966765b30d846c0512c59e0ff42ac2cbd2e"
+source = "git+https://github.com/moeleak/material-ui-rs.git?branch=feat%2Flauncher-widgets#9aed2f0f7f7ca37854751c7abb60f4fb3d780bda"
 dependencies = [
  "android-activity",
  "futures-timer",

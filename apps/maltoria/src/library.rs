@@ -1,20 +1,20 @@
 //! The library: every game in the container as a grid of covers, with a
-//! search, a few filters, and a sheet of the selected game's details.
+//! search and a few filters; a cover opens the game's details.
 //!
 //! Covers load as they come into view and are kept for the frames after; a
 //! cover's context menu holds what a game's details offer.
 
 use std::cmp::Ordering;
 
-use iced::widget::{Column, Row, Space, container, mouse_area, scrollable, sensor, text};
+use iced::widget::{Column, Row, container, mouse_area, scrollable, sensor, text};
 use iced::{Alignment, Length};
 use maltoria_core::i18n::s;
 use maltoria_core::library_view::{matches_query, natural_cmp};
-use maltoria_core::model::{Game, format_last_played, format_play_time};
+use maltoria_core::model::{Game, format_play_time};
 use maltoria_core::program_settings::{ProgramSettingsDto, locale_label};
 use maltoria_core::runtime::{PrimaryAction, RuntimeAction, RuntimeTable, primary_action_for};
 use material::widget::button::{self, ButtonVariant, ChipVariant, IconButtonVariant};
-use material::widget::{grid, image, menu, search, select, sheet};
+use material::widget::{grid, image, menu, search, select};
 use material::{Theme, tokens};
 use material_ui_rs as material;
 
@@ -26,6 +26,8 @@ pub const MAX_COVER_WIDTH: f32 = 176.0;
 pub const COVER_RATIO: f32 = 3.0 / 4.0;
 /// The longest side covers are decoded to: twice the widest cover, for Retina.
 pub const COVER_DECODE_SIZE: u32 = 720;
+/// The longest side portraits and thumbnails are decoded to.
+pub const PICTURE_DECODE_SIZE: u32 = 512;
 /// The covers kept decoded; more than a screen of them.
 pub const COVER_CACHE_SIZE: usize = 240;
 
@@ -149,11 +151,15 @@ pub struct State {
     pub query: String,
     pub filter: Filter,
     pub sort: Sort,
-    /// The game whose details are open, by id.
+    /// The game last clicked, by id, which the grid highlights.
     pub selected: Option<String>,
-    /// The selected game's run settings, once the helper sent them.
+    /// The run settings of the game whose details are open, once the helper
+    /// sent them.
     pub settings: Option<ProgramSettingsDto>,
     pub covers: image::Cache<String>,
+    /// Portraits and search thumbnails, by file path: shown whole, so not
+    /// cropped to the covers' ratio.
+    pub pictures: image::Cache<String>,
 }
 
 impl Default for State {
@@ -167,6 +173,7 @@ impl Default for State {
             covers: image::Cache::new(COVER_CACHE_SIZE)
                 .aspect_ratio(COVER_RATIO)
                 .max_dimension(COVER_DECODE_SIZE),
+            pictures: image::Cache::new(COVER_CACHE_SIZE).max_dimension(PICTURE_DECODE_SIZE),
         }
     }
 }
@@ -180,7 +187,7 @@ pub fn primary_action(runtime: &RuntimeTable, game: &Game) -> PrimaryAction {
 }
 
 /// The message for a primary action on `game`.
-fn action_message(action: Option<RuntimeAction>, game: &Game) -> Option<Message> {
+pub fn action_message(action: Option<RuntimeAction>, game: &Game) -> Option<Message> {
     let id = game.id.clone();
 
     action.map(|action| match action {
@@ -205,6 +212,10 @@ pub fn view<'a>(
         .push(
             select::outlined(Sort::ALL, Some(state.sort), Message::Sort)
                 .width(Length::Fixed(160.0)),
+        )
+        .push(
+            button::icon_button("sync", IconButtonVariant::Standard)
+                .on_press(Message::SyncMetadata),
         )
         .push(
             button::extended_fab_with_icon("add", s().app.add_game, button::FabVariant::Primary)
@@ -255,31 +266,23 @@ pub fn view<'a>(
         .padding(24)
         .width(Length::Fill);
 
-    let library = scrollable(library).height(Length::Fill).width(Length::Fill);
-
-    let selected = state
-        .selected
-        .as_deref()
-        .and_then(|id| games.iter().find(|game| game.id == id));
-
-    // The grid keeps its place in the tree whether or not the details show:
-    // moving it would reset its widgets' state, such as a context menu that
-    // selecting the game just opened.
-    let details: material::Element<'a, Message> = match selected {
-        Some(game) => details(game, state, runtime),
-        None => Space::new().width(0).into(),
-    };
-
-    Row::new()
-        .push(library)
-        .push(details)
+    // The details open in a dialog over the page, so that the grid keeps
+    // its place in the tree: moving it would reset its widgets' state, such
+    // as a context menu that selecting the game just opened.
+    scrollable(library)
         .height(Length::Fill)
+        .width(Length::Fill)
         .into()
 }
 
-fn cover<'a>(game: &'a Game, state: &'a State, corner: f32) -> material::Element<'a, Message> {
+/// `game`'s cover at the library's ratio, loaded when it comes into view.
+pub fn cover_art<'a>(
+    game: &'a Game,
+    covers: &'a image::Cache<String>,
+    corner: f32,
+) -> material::Element<'a, Message> {
     let art: material::Element<'a, Message> = if game.art.is_some() {
-        image::cached(&state.covers, &game.id, corner)
+        image::cached(covers, &game.id, corner)
     } else {
         image::placeholder(image::Placeholder::Missing, corner).into()
     };
@@ -287,8 +290,15 @@ fn cover<'a>(game: &'a Game, state: &'a State, corner: f32) -> material::Element
     let id = game.id.clone();
 
     sensor(grid::aspect_ratio(art, COVER_RATIO))
+        .key(cover_key(game, covers))
         .on_show(move |_| Message::CoverShown(id.clone()))
         .into()
+}
+
+/// What a cover's sensor watches: a new file, or a cover the cache let go
+/// of, asks for the cover again.
+pub fn cover_key(game: &Game, covers: &image::Cache<String>) -> (Option<std::path::PathBuf>, bool) {
+    (game.art.clone(), covers.status(&game.id).is_some())
 }
 
 fn cell<'a>(
@@ -300,7 +310,7 @@ fn cell<'a>(
     let caption = caption(game, runtime);
 
     let body = Column::new()
-        .push(cover(game, state, tokens::shape::CORNER_MEDIUM))
+        .push(cover_art(game, &state.covers, tokens::shape::CORNER_MEDIUM))
         .push(
             material::text::type_scale(game.title.as_str(), tokens::typography::TITLE_SMALL)
                 .wrapping(text::Wrapping::WordOrGlyph),
@@ -323,7 +333,7 @@ fn cell<'a>(
 
     let id = game.id.clone();
     let body = mouse_area(body)
-        .on_press(Message::Select(id.clone()))
+        .on_press(Message::OpenDetails(id.clone()))
         .on_double_click(Message::Play(id.clone()))
         .interaction(iced::mouse::Interaction::Pointer);
 
@@ -344,7 +354,12 @@ fn cell<'a>(
         .item(
             menu::item(s().library.game_details)
                 .icon("info")
-                .on_press(Message::Select(id.clone())),
+                .on_press(Message::OpenDetails(id.clone())),
+        )
+        .item(
+            menu::item(s().library.game_info_cover_ellipsis)
+                .icon("image_search")
+                .on_press(Message::OpenEditor(id.clone())),
         )
         .item(
             menu::item(reveal_label())
@@ -438,108 +453,6 @@ fn empty<'a>(
         .into()
 }
 
-/// The width of the details sheet.
-const DETAILS_WIDTH: f32 = 360.0;
-
-fn details<'a>(
-    game: &'a Game,
-    state: &'a State,
-    runtime: &'a RuntimeTable,
-) -> material::Element<'a, Message> {
-    let primary = primary_action(runtime, game);
-    let play = button::button(primary.label, ButtonVariant::Filled)
-        .on_press_maybe(action_message(primary.action, game))
-        .width(Length::Fill);
-
-    let header = Row::new().push(Space::new().width(Length::Fill)).push(
-        button::icon_button("close", IconButtonVariant::Standard).on_press(Message::CloseDetails),
-    );
-
-    let mut facts = Column::new().spacing(8);
-
-    for (label, value) in [
-        (
-            s().statistics.total_playtime,
-            format_play_time(game.play_time).unwrap_or_else(|| s().app.not_played_yet.to_owned()),
-        ),
-        (
-            s().library.last_played,
-            format_last_played(game.last_played).unwrap_or_else(|| "—".to_owned()),
-        ),
-    ] {
-        facts = facts.push(
-            Row::new()
-                .push(
-                    material::text::type_scale(label, tokens::typography::BODY_MEDIUM)
-                        .style(material::text::surface_variant)
-                        .width(Length::Fill),
-                )
-                .push(material::text::type_scale(
-                    value,
-                    tokens::typography::BODY_MEDIUM,
-                )),
-        );
-    }
-
-    let mut column = Column::new()
-        .push(header)
-        .push(cover(game, state, tokens::shape::CORNER_LARGE))
-        .push(material::text::type_scale(
-            game.title.as_str(),
-            tokens::typography::HEADLINE_SMALL,
-        ))
-        .push(
-            material::text::type_scale(game.studio(), tokens::typography::BODY_MEDIUM)
-                .style(material::text::surface_variant),
-        )
-        .push(play)
-        .push(facts)
-        .spacing(16)
-        .padding(16)
-        .width(Length::Fill);
-
-    if let Some(settings) = state
-        .settings
-        .as_ref()
-        .filter(|settings| Some(settings.executable.as_str()) == executable(game).as_deref())
-    {
-        column = column.push(
-            Column::new()
-                .push(material::text::type_scale(
-                    s().program_settings.locale_label,
-                    tokens::typography::TITLE_SMALL,
-                ))
-                .push(
-                    select::outlined(
-                        LOCALES.map(LocaleOption),
-                        Some(LocaleOption(
-                            LOCALES
-                                .iter()
-                                .find(|locale| **locale == settings.locale)
-                                .copied()
-                                .unwrap_or(""),
-                        )),
-                        |LocaleOption(locale)| Message::SetLocale(locale.to_owned()),
-                    )
-                    .width(Length::Fill),
-                )
-                .spacing(8),
-        );
-    }
-
-    if let Some(description) = game.description.as_deref() {
-        column = column.push(
-            material::text::type_scale(description, tokens::typography::BODY_MEDIUM)
-                .style(material::text::surface_variant),
-        );
-    }
-
-    sheet::standard_side(scrollable(column).height(Length::Fill))
-        .width(Length::Fixed(DETAILS_WIDTH))
-        .height(Length::Fill)
-        .into()
-}
-
 /// The executable whose run settings apply to `game`.
 pub fn executable(game: &Game) -> Option<String> {
     game.last_executable
@@ -554,7 +467,20 @@ pub fn executable(game: &Game) -> Option<String> {
 
 /// A locale in the details' select, shown by its name.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct LocaleOption(&'static str);
+pub struct LocaleOption(pub &'static str);
+
+impl LocaleOption {
+    /// The option for `locale`, or the container's own for one not listed.
+    pub fn of(locale: &str) -> Self {
+        Self(
+            LOCALES
+                .iter()
+                .find(|known| **known == locale)
+                .copied()
+                .unwrap_or(""),
+        )
+    }
+}
 
 impl std::fmt::Display for LocaleOption {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

@@ -8,7 +8,10 @@ description = "Maltoria's Material 3 interface: a game library, play time and on
 
 [dependencies]
 chrono = "=0.4.45"
+# PNG snapshots for developers; see src/dev.rs.
+image = { version = "=0.25.10", default-features = false, features = ["png"] }
 iced = { version = "=0.14.0", default-features = false, features = [
+    "advanced",
     "canvas",
     "image-without-codecs",
     "linux-theme-detection",

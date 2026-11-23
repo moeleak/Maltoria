@@ -9,11 +9,11 @@ use std::collections::BTreeMap;
 
 use chrono::{Datelike, Duration, NaiveDate};
 use iced::widget::canvas::{self, Frame, Geometry, Path};
-use iced::widget::{Column, Row, text};
+use iced::widget::{Column, Row, container, text};
 use iced::{Length, Point, Rectangle, Size, border, mouse};
 use maltoria_core::i18n::{fmt, s};
 use maltoria_core::model::Game;
-use material::widget::{card, page};
+use material::widget::page;
 use material::{Theme, tokens};
 use material_ui_rs as material;
 
@@ -166,11 +166,7 @@ pub fn view(games: &[Game], today: NaiveDate) -> material::Element<'_, Message> 
         page::header(app.activity_title, statistics.page_subtitle),
         page::sections([
             summary.into(),
-            page::section(
-                app.last_30_days,
-                card::filled(chart).padding(16).width(Length::Fill),
-            )
-            .into(),
+            page::section(app.last_30_days, container(chart).width(Length::Fill)).into(),
             page::section(app.most_played, ranking(games, &journal)).into(),
         ]),
     )
@@ -178,7 +174,7 @@ pub fn view(games: &[Game], today: NaiveDate) -> material::Element<'_, Message> 
 }
 
 fn stat<'a>(title: &'a str, value: String, caption: &'a str) -> material::Element<'a, Message> {
-    card::filled(
+    container(
         Column::new()
             .push(
                 material::text::type_scale(title, tokens::typography::LABEL_LARGE)
@@ -194,7 +190,6 @@ fn stat<'a>(title: &'a str, value: String, caption: &'a str) -> material::Elemen
             )
             .spacing(4),
     )
-    .padding(16)
     .width(Length::FillPortion(1))
     .into()
 }
