@@ -5,6 +5,7 @@
 //! interface, built on `maltoria-core` and `material-ui-rs`.
 
 mod activity;
+mod adding;
 mod bridge;
 mod container;
 mod details;
@@ -26,8 +27,8 @@ use iced::widget::{Column, Space, container as iced_container};
 use iced::{Length, Size, Subscription, Task};
 use maltoria_core::bridge::dto::{Container, FoldersDto, SetupStatusDto};
 use maltoria_core::bridge::{
-    BottleCreateUpdate, BridgeEvent, BridgeStatus, BridgeSupervisor, MetadataUpdate, ScanUpdate,
-    SetupUpdate,
+    BottleCreateUpdate, BridgeEvent, BridgeStatus, BridgeSupervisor, FolderEdit, MetadataUpdate,
+    ScanUpdate, SetupUpdate,
 };
 use maltoria_core::i18n::s;
 use maltoria_core::model::Game;
@@ -187,6 +188,8 @@ pub struct App {
     folders: Option<FoldersDto>,
     /// Scan the folders again once the helper confirms a change to them.
     scan_after_folders: bool,
+    /// Sync the metadata once that scan finds a game just added.
+    sync_after_scan: bool,
     /// Re-read the library once the helper confirms a pinned program.
     reload_after_pin: bool,
     setup: Option<SetupStatusDto>,
@@ -248,6 +251,7 @@ fn boot() -> (App, Task<Message>) {
         auto_synced: HashSet::new(),
         folders: None,
         scan_after_folders: false,
+        sync_after_scan: false,
         reload_after_pin: false,
         setup: None,
         install: None,
@@ -454,6 +458,25 @@ impl App {
         self.auto_synced.insert(container);
     }
 
+    /// Finds the metadata of every game that has none, as the sync button
+    /// does.
+    fn sync_metadata(&mut self) {
+        let sources = self
+            .metadata_preferences
+            .as_ref()
+            .map(metadata::sync_sources)
+            .unwrap_or_default();
+
+        if sources.is_empty() {
+            self.notify(s().dialogs.no_metadata_sources);
+        } else {
+            self.with_container(|bridge, container| {
+                bridge.sync_metadata(container, sources, false, true);
+            });
+            self.notify(s().state.scanning_and_syncing);
+        }
+    }
+
     /// Takes `id` out of the library: its card goes at once, and the
     /// helper's reply has the library read again.
     fn remove_game(&mut self, id: &str) {
@@ -637,22 +660,7 @@ fn update(app: &mut App, message: Message) -> Task<Message> {
                 bridge.set_rating(container, &id, rating.map(i64::from));
             });
         }
-        Message::SyncMetadata => {
-            let sources = app
-                .metadata_preferences
-                .as_ref()
-                .map(metadata::sync_sources)
-                .unwrap_or_default();
-
-            if sources.is_empty() {
-                app.notify(s().dialogs.no_metadata_sources);
-            } else {
-                app.with_container(|bridge, container| {
-                    bridge.sync_metadata(container, sources, false, true);
-                });
-                app.notify(s().state.scanning_and_syncing);
-            }
-        }
+        Message::SyncMetadata => app.sync_metadata(),
         Message::OpenEditor(id) => {
             let preferences = app.metadata_preferences.clone().unwrap_or_default();
 
@@ -1059,10 +1067,16 @@ fn bridge_event(app: &mut App, event: BridgeEvent) -> Task<Message> {
         }
         BridgeEvent::Scan { container, update } => match update {
             ScanUpdate::Completed { entries } => {
-                // New games earn another automatic pass.
-                app.auto_synced.remove(&container);
                 app.set_games(&container, entries);
-                app.auto_sync();
+
+                // A game just added is matched at once; other new games earn
+                // another automatic pass.
+                if std::mem::take(&mut app.sync_after_scan) {
+                    app.sync_metadata();
+                } else {
+                    app.auto_synced.remove(&container);
+                    app.auto_sync();
+                }
             }
             ScanUpdate::Failed { reason, .. } => app.notify(reason),
             _ => {}
@@ -1071,19 +1085,52 @@ fn bridge_event(app: &mut App, event: BridgeEvent) -> Task<Message> {
             purpose,
             path: Some(path),
         } if purpose == "pin" => {
-            let name = std::path::Path::new(&path)
-                .file_stem()
-                .map(|name| name.to_string_lossy().into_owned())
-                .unwrap_or_else(|| s().state.fallback_program.to_owned());
+            let home = std::env::var_os("HOME").map(std::path::PathBuf::from);
 
-            // A new game earns another automatic metadata pass.
-            if let Some(container) = &app.container {
-                app.auto_synced.remove(container);
+            match adding::of(
+                std::path::Path::new(&path),
+                app.folders.as_ref(),
+                home.as_deref(),
+            ) {
+                adding::Adding::Folder {
+                    folder,
+                    assign,
+                    executable,
+                } => {
+                    app.scan_after_folders = true;
+                    app.sync_after_scan = true;
+                    app.with_container(|bridge, container| {
+                        if assign {
+                            bridge.edit_folders(
+                                container,
+                                FolderEdit::Assign {
+                                    path: folder.clone(),
+                                    assigned: true,
+                                },
+                            );
+                        }
+                        bridge.edit_folders(
+                            container,
+                            FolderEdit::Executable {
+                                path: folder,
+                                executable: Some(executable),
+                            },
+                        );
+                    });
+                }
+                adding::Adding::Pin { executable, name } => {
+                    let name = if name.is_empty() {
+                        s().state.fallback_program.to_owned()
+                    } else {
+                        name
+                    };
+
+                    app.reload_after_pin = true;
+                    app.with_container(|bridge, container| {
+                        bridge.set_program_pinned(container, &executable, &name, true)
+                    });
+                }
             }
-            app.reload_after_pin = true;
-            app.with_container(|bridge, container| {
-                bridge.set_program_pinned(container, &path, &name, true)
-            });
         }
         BridgeEvent::PathChosen {
             purpose,
@@ -1152,6 +1199,7 @@ fn bridge_event(app: &mut App, event: BridgeEvent) -> Task<Message> {
         }
         BridgeEvent::FoldersFailed { reason, .. } => {
             app.notify(reason);
+            app.sync_after_scan = false;
 
             if std::mem::take(&mut app.scan_after_folders)
                 && let Some(bridge) = &app.bridge
