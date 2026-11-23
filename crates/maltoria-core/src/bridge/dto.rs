@@ -1500,7 +1500,7 @@ mod tests {
 
     #[test]
     fn existing_artwork_file_is_returned_unchanged() {
-        let artwork = format!("{}/../../apps/whisky-gpui/assets/astral.png", env!("CARGO_MANIFEST_DIR"));
+        let artwork = format!("{}/assets/astral.png", env!("CARGO_MANIFEST_DIR"));
         assert_eq!(
             entry_with_cover(&artwork).artwork_path(),
             Some(PathBuf::from(&artwork))

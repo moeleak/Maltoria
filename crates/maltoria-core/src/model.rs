@@ -304,10 +304,9 @@ fn asset(file: impl AsRef<std::path::Path>) -> PathBuf {
         let bundled = std::env::current_exe()
             .ok()
             .and_then(|exe| Some(exe.parent()?.parent()?.join("Resources")));
-        bundled.filter(|path| path.is_dir()).unwrap_or_else(|| {
-            // The demo artwork ships with the GPUI app.
-            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../apps/whisky-gpui/assets")
-        })
+        bundled
+            .filter(|path| path.is_dir())
+            .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets"))
     })
     .join(file)
 }

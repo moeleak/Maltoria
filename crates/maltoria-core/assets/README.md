@@ -7,7 +7,7 @@ These ten illustrations were authored specifically for this demo with custom geo
 From the repository root:
 
 ```sh
-python3 apps/whisky-gpui/tools/generate_covers.py
+python3 crates/maltoria-core/tools/generate_covers.py
 ```
 
 Requires Python 3.9+, Pillow, and NumPy. The environment used to generate the checked-in images already contained **Python 3.9.6, Pillow 11.3.0, and NumPy 2.0.2**; no packages were installed. The script uses fixed, scene-specific seeds for both Python's RNG and NumPy's RNG. Repeated generation with these dependency versions is byte-for-byte deterministic. Other dependency versions may change resampling or PNG encoding slightly.
@@ -15,8 +15,8 @@ Requires Python 3.9+, Pillow, and NumPy. The environment used to generate the ch
 Optional single-image generation or output override:
 
 ```sh
-python3 apps/whisky-gpui/tools/generate_covers.py --only astral
-python3 apps/whisky-gpui/tools/generate_covers.py --output /tmp/whisky-covers
+python3 crates/maltoria-core/tools/generate_covers.py --only astral
+python3 crates/maltoria-core/tools/generate_covers.py --output /tmp/whisky-covers
 ```
 
 ## Artwork and dimensions
