@@ -32,6 +32,9 @@ pub const SCROLLBAR_ROOM: f32 = 16.0;
 /// The style of a scrollbar in a dialog, faded with it by `alpha`.
 pub fn faded_scrollbar(theme: &Theme, status: scrollable::Status, alpha: f32) -> scrollable::Style {
     let mut style = material::style::scrollable::default(theme, status);
+    // The dialog owns the surface; a scrollable's own would outlast its fade.
+    style.container = iced::widget::container::Style::default();
+    style.gap = style.gap.map(|background| background.scale_alpha(alpha));
 
     for rail in [&mut style.vertical_rail, &mut style.horizontal_rail] {
         rail.background = rail
@@ -79,9 +82,13 @@ pub fn cover<'a>(
         Some(image::Status::Ready(handle)) => {
             image::shaped(handle.clone(), corner).opacity(alpha).into()
         }
-        Some(status) if game.art.is_some() => image::placeholder(status.into(), corner).into(),
-        _ if game.art.is_some() => image::placeholder(image::Placeholder::Loading, corner).into(),
-        _ => image::placeholder(image::Placeholder::Missing, corner).into(),
+        Some(status) if game.art.is_some() => {
+            image::faded_placeholder(status.into(), corner, alpha).into()
+        }
+        _ if game.art.is_some() => {
+            image::faded_placeholder(image::Placeholder::Loading, corner, alpha).into()
+        }
+        _ => image::faded_placeholder(image::Placeholder::Missing, corner, alpha).into(),
     };
 
     let id = game.id.clone();
@@ -92,8 +99,8 @@ pub fn cover<'a>(
         .into()
 }
 
-/// The image file at `path` from `pictures`, whole within a 3:4 box and
-/// faded by `alpha`, decoded in the background when it comes into view.
+/// The image file at `path` from `pictures`, at 3:4 and faded by `alpha`,
+/// decoded in the background when it comes into view.
 pub fn picture<'a>(
     pictures: &'a image::Cache<String>,
     path: &str,
@@ -101,12 +108,11 @@ pub fn picture<'a>(
     alpha: f32,
 ) -> material::Element<'a, Message> {
     let art: material::Element<'a, Message> = match pictures.status(&path.to_owned()) {
-        Some(image::Status::Ready(handle)) => image::shaped(handle.clone(), corner)
-            .content_fit(image::ContentFit::Contain)
-            .opacity(alpha)
-            .into(),
-        Some(status) => image::placeholder(status.into(), corner).into(),
-        None => image::placeholder(image::Placeholder::Loading, corner).into(),
+        Some(image::Status::Ready(handle)) => {
+            image::shaped(handle.clone(), corner).opacity(alpha).into()
+        }
+        Some(status) => image::faded_placeholder(status.into(), corner, alpha).into(),
+        None => image::faded_placeholder(image::Placeholder::Loading, corner, alpha).into(),
     };
 
     let path = path.to_owned();
@@ -237,6 +243,7 @@ fn hero<'a>(
                         Some(LocaleOption::of(&settings.locale)),
                         |LocaleOption(locale)| Message::SetLocale(locale.to_owned()),
                     )
+                    .alpha(alpha)
                     .width(Length::Fill),
                 )
                 .spacing(6),
@@ -363,7 +370,7 @@ fn character_card<'a>(
     let portrait: material::Element<'a, Message> = match portrait {
         Some(path) => picture(images, path, corner, alpha),
         None => grid::aspect_ratio(
-            image::placeholder(image::Placeholder::Missing, corner),
+            image::faded_placeholder(image::Placeholder::Missing, corner, alpha),
             library::COVER_RATIO,
         )
         .into(),

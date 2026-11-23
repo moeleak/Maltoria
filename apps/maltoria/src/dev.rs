@@ -6,7 +6,9 @@
 //! - `page library`, `page activity`, `page settings` opens a page;
 //! - `select <title>` opens the details of the first game whose title
 //!   contains `<title>`; `close` closes them;
-//! - `shot <name>` saves the window as `<name>.png`.
+//! - `shot <name>` saves the window as `<name>.png`;
+//! - `dismiss <name> <ms>` closes the details and saves the window `<ms>`
+//!   milliseconds into their fade.
 //!
 //! Nothing of this runs without the variable.
 
@@ -29,6 +31,11 @@ pub enum Request {
     Select(String),
     Close,
     Shot(String),
+    /// Closes the details, and saves the window `after` into the fade.
+    Dismiss {
+        name: String,
+        after: Duration,
+    },
 }
 
 /// The snapshot directory, if snapshots are on.
@@ -81,6 +88,15 @@ pub fn parse(line: &str) -> Option<Request> {
         },
         "select" if !argument.is_empty() => Some(Request::Select(argument.to_owned())),
         "close" => Some(Request::Close),
+        "dismiss" => {
+            let (name, after) = argument.split_once(' ')?;
+            let after = Duration::from_millis(after.trim().parse().ok()?);
+
+            is_name(name).then(|| Request::Dismiss {
+                name: name.to_owned(),
+                after,
+            })
+        }
         "shot" if is_name(argument) => Some(Request::Shot(argument.to_owned())),
         _ => None,
     }
@@ -129,6 +145,14 @@ mod tests {
             Some(Request::Shot("details-1".into()))
         );
         assert_eq!(parse("shot ../escape"), None);
+        assert_eq!(
+            parse("dismiss fade 80"),
+            Some(Request::Dismiss {
+                name: "fade".into(),
+                after: Duration::from_millis(80)
+            })
+        );
+        assert_eq!(parse("dismiss fade soon"), None);
         assert_eq!(parse("page elsewhere"), None);
         assert_eq!(parse("select"), None);
         assert_eq!(parse(""), None);

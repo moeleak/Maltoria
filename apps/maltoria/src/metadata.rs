@@ -280,7 +280,7 @@ fn result<'a>(
     let corner = tokens::shape::CORNER_SMALL;
     let thumbnail: material::Element<'a, Message> = match &candidate.thumbnail {
         Some(path) => details::picture(images, &path.to_string_lossy(), corner, alpha),
-        None => image::placeholder(image::Placeholder::Missing, corner).into(),
+        None => image::faded_placeholder(image::Placeholder::Missing, corner, alpha).into(),
     };
 
     let byline = [

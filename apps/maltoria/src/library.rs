@@ -157,8 +157,9 @@ pub struct State {
     /// sent them.
     pub settings: Option<ProgramSettingsDto>,
     pub covers: image::Cache<String>,
-    /// Portraits and search thumbnails, by file path: shown whole, so not
-    /// cropped to the covers' ratio.
+    /// Portraits and search thumbnails, by file path: trimmed of their plain
+    /// background and cropped from the top, so that a figure fills its cell
+    /// with its face in view.
     pub pictures: image::Cache<String>,
 }
 
@@ -173,7 +174,11 @@ impl Default for State {
             covers: image::Cache::new(COVER_CACHE_SIZE)
                 .aspect_ratio(COVER_RATIO)
                 .max_dimension(COVER_DECODE_SIZE),
-            pictures: image::Cache::new(COVER_CACHE_SIZE).max_dimension(PICTURE_DECODE_SIZE),
+            pictures: image::Cache::new(COVER_CACHE_SIZE)
+                .trim_borders()
+                .aspect_ratio(COVER_RATIO)
+                .crop_from_top()
+                .max_dimension(PICTURE_DECODE_SIZE),
         }
     }
 }

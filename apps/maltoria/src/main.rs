@@ -846,6 +846,15 @@ fn dev_requests(app: &mut App) -> Task<Message> {
                 }
             }
             dev::Request::Close => tasks.push(update(app, Message::CloseDetails)),
+            dev::Request::Dismiss { name, after } => {
+                tasks.push(update(app, Message::CloseDetails));
+                tasks.push(
+                    Task::perform(async move { std::thread::sleep(after) }, |()| ())
+                        .then(|()| iced::window::latest())
+                        .and_then(iced::window::screenshot)
+                        .map(move |screenshot| Message::DevShot(name.clone(), screenshot)),
+                );
+            }
             dev::Request::Shot(name) => tasks.push(
                 iced::window::latest()
                     .and_then(iced::window::screenshot)
