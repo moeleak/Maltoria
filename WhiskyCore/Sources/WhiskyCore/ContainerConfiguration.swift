@@ -241,6 +241,9 @@ public enum ContainerConfiguration {
         ]),
         .init(id: "performance", title: "性能", fields: [
             toggle("shaderCacheEnabled", "着色器缓存", "performanceConfig.shaderCacheEnabled", true),
+            choice("frameRateLimit", "帧率上限", "graphicsConfig.frameRateLimit", "off", [
+                ("off", "不限"), ("30", "30 fps"), ("60", "60 fps")
+            ]),
             toggle("disableAppNap", "防止 App Nap 限制性能", "performanceConfig.disableAppNap", false, platforms: [.macOS])
         ]),
         .init(id: "cleanup", title: "退出与清理", fields: [

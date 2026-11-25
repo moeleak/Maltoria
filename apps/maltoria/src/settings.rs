@@ -59,6 +59,47 @@ impl Appearance {
     }
 }
 
+/// The container's cap on frames per second, as its `frameRateLimit` stores it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FrameRateLimit {
+    Off,
+    Fps30,
+    Fps60,
+}
+
+impl FrameRateLimit {
+    pub const ALL: [Self; 3] = [Self::Off, Self::Fps30, Self::Fps60];
+
+    /// The value the configuration stores.
+    pub fn wire(self) -> &'static str {
+        match self {
+            Self::Off => "off",
+            Self::Fps30 => "30",
+            Self::Fps60 => "60",
+        }
+    }
+
+    pub fn from_wire(value: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|limit| limit.wire() == value)
+    }
+
+    pub fn index(self) -> usize {
+        Self::ALL
+            .iter()
+            .position(|limit| *limit == self)
+            .unwrap_or(0)
+    }
+
+    fn label(self) -> &'static str {
+        let fallback = match self {
+            Self::Off => "Unlimited",
+            Self::Fps30 => "30 fps",
+            Self::Fps60 => "60 fps",
+        };
+        maltoria_core::i18n::config::option_title("frameRateLimit", self.wire(), fallback)
+    }
+}
+
 /// What the settings page shows.
 pub struct View<'a> {
     pub setup: Option<&'a SetupStatusDto>,
@@ -67,6 +108,11 @@ pub struct View<'a> {
     /// The container's Metal HUD setting, once its configuration arrived;
     /// `None` also where the platform has no Metal.
     pub metal_hud: Option<bool>,
+    /// The container's frame rate limit, once its configuration arrived;
+    /// `None` also where the bridge has no such setting.
+    pub frame_rate_limit: Option<FrameRateLimit>,
+    /// The frame rate limit's segmented button, whose selection animates.
+    pub frame_rate: &'a segmented_button::State,
     pub color: MaterialColor,
     /// The appearance's segmented button, whose selection animates.
     pub appearance: &'a segmented_button::State,
@@ -83,7 +129,11 @@ pub fn view(settings: View<'_>) -> material::Element<'_, Message> {
         .into(),
         page::section(
             app.container_section,
-            container_section(settings.container, settings.metal_hud),
+            container_section(
+                settings.container,
+                settings.metal_hud,
+                settings.frame_rate_limit.map(|_| settings.frame_rate),
+            ),
         )
         .into(),
     ];
@@ -193,10 +243,11 @@ fn runtime<'a>(
         .into()
 }
 
-fn container_section(
-    current: Option<&Container>,
+fn container_section<'a>(
+    current: Option<&'a Container>,
     metal_hud: Option<bool>,
-) -> material::Element<'_, Message> {
+    frame_rate: Option<&segmented_button::State>,
+) -> material::Element<'a, Message> {
     let app = &s().app;
 
     let Some(current) = current else {
@@ -233,6 +284,18 @@ fn container_section(
             maltoria_core::i18n::config::field_title("", "metalHud", "Metal HUD"),
             app.metal_hud_detail,
             toggler::control(enabled).on_toggle(Message::SetMetalHud),
+        ));
+    }
+
+    if let Some(state) = frame_rate {
+        let limits = segmented_button::group(segmented_button::animated_label_actions(
+            state,
+            FrameRateLimit::ALL.map(|limit| (limit.label(), Message::SetFrameRateLimit(limit))),
+        ));
+        section = section.push(row(
+            maltoria_core::i18n::config::field_title("", "frameRateLimit", "Frame Rate Limit"),
+            app.frame_rate_limit_detail,
+            limits,
         ));
     }
 
@@ -339,5 +402,16 @@ mod tests {
         }
 
         assert_eq!(Appearance::from_dark_mode(None), Appearance::System);
+    }
+
+    #[test]
+    fn frame_rate_limit_reads_back_what_it_stores() {
+        for (index, limit) in FrameRateLimit::ALL.into_iter().enumerate() {
+            assert_eq!(FrameRateLimit::from_wire(limit.wire()), Some(limit));
+            assert_eq!(limit.index(), index);
+        }
+
+        // A value this interface has no segment for is not shown as one.
+        assert_eq!(FrameRateLimit::from_wire("45"), None);
     }
 }

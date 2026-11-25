@@ -42,7 +42,7 @@ use material_ui_rs as material;
 
 use crate::container::Choice;
 use crate::prefs::Prefs;
-use crate::settings::Appearance;
+use crate::settings::{Appearance, FrameRateLimit};
 
 const WINDOW_SIZE: Size = Size::new(1280.0, 840.0);
 const MIN_WINDOW_SIZE: Size = Size::new(720.0, 560.0);
@@ -143,6 +143,7 @@ pub enum Message {
     RevealContainer,
     InstallFonts,
     SetMetalHud(bool),
+    SetFrameRateLimit(FrameRateLimit),
     SetAppearance(Appearance),
     SelectColor(MaterialColor),
 }
@@ -206,6 +207,10 @@ pub struct App {
     /// The library container's `metalHud` setting, once its configuration
     /// arrived.
     metal_hud: Option<bool>,
+    /// The library container's `frameRateLimit` setting, once its
+    /// configuration arrived.
+    frame_rate_limit: Option<FrameRateLimit>,
+    frame_rate: segmented_button::State,
 }
 
 fn boot() -> (App, Task<Message>) {
@@ -270,6 +275,8 @@ fn boot() -> (App, Task<Message>) {
         ),
         system_dark: false,
         metal_hud: None,
+        frame_rate_limit: None,
+        frame_rate: segmented_button::State::new(0),
         prefs,
     };
 
@@ -314,6 +321,7 @@ fn subscription(app: &App) -> Subscription<Message> {
         || app.clipboard_transition.is_animating()
         || app.removing_transition.is_animating()
         || app.appearance.is_animating()
+        || app.frame_rate.is_animating()
         || app.library.syncing.is_some()
     {
         subscriptions.push(iced::window::frames().map(Message::Frame));
@@ -390,14 +398,13 @@ impl App {
         self.container = Some(path.clone());
         self.runtime = RuntimeTable::default();
         self.metal_hud = None;
+        self.frame_rate_limit = None;
 
         if let Some(bridge) = &self.bridge {
             bridge.configure_runtime(&path);
             bridge.load_folders(&path);
             bridge.load_entries(&path);
-            if cfg!(target_os = "macos") {
-                bridge.load_configuration(&path);
-            }
+            bridge.load_configuration(&path);
         }
     }
 
@@ -615,6 +622,7 @@ fn update(app: &mut App, message: Message) -> Task<Message> {
                 app.removing = None;
             }
             let _ = app.appearance.advance(now);
+            let _ = app.frame_rate.advance(now);
 
             if let Some(syncing) = &mut app.library.syncing
                 && !syncing.advance(now)
@@ -934,6 +942,17 @@ fn update(app: &mut App, message: Message) -> Task<Message> {
             app.metal_hud = Some(enabled);
             app.with_container(|bridge, container| {
                 bridge.set_configuration(container, "metalHud", serde_json::Value::Bool(enabled));
+            });
+        }
+        Message::SetFrameRateLimit(limit) => {
+            app.frame_rate_limit = Some(limit);
+            app.frame_rate.select(limit.index(), Instant::now());
+            app.with_container(|bridge, container| {
+                bridge.set_configuration(
+                    container,
+                    "frameRateLimit",
+                    serde_json::Value::String(limit.wire().to_owned()),
+                );
             });
         }
         Message::SetAppearance(appearance) => {
@@ -1279,6 +1298,15 @@ fn bridge_event(app: &mut App, event: BridgeEvent) -> Task<Message> {
         } => {
             if app.container.as_deref() == Some(container.as_str()) {
                 app.metal_hud = values.get("metalHud").and_then(serde_json::Value::as_bool);
+                app.frame_rate_limit = values
+                    .get("frameRateLimit")
+                    .and_then(serde_json::Value::as_str)
+                    .and_then(FrameRateLimit::from_wire);
+                if let Some(limit) = app.frame_rate_limit
+                    && app.frame_rate.selected_index() != limit.index()
+                {
+                    app.frame_rate = segmented_button::State::new(limit.index());
+                }
             }
         }
         BridgeEvent::ConfigurationFailed {
@@ -1522,6 +1550,8 @@ fn view(app: &App) -> material::Element<'_, Message> {
             install: app.install.as_ref(),
             container: app.container(),
             metal_hud: app.metal_hud,
+            frame_rate_limit: app.frame_rate_limit,
+            frame_rate: &app.frame_rate,
             color: app.theme.selected_color(),
             appearance: &app.appearance,
         }),

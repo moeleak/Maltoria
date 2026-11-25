@@ -168,6 +168,9 @@ public struct BottleGraphicsConfig: Codable, Equatable {
 
     var gdiUpscalerCache: GDIUpscalerCacheMode = .memory
 
+    /// How many frames per second games may present. Off by default.
+    var frameRateLimit: FrameRateLimit = .off
+
     /// Compatibility access for callers using the original MetalFX switch.
     var metalFXSpatial: Bool {
         get { gdiUpscaler == .metalfx }
@@ -177,6 +180,7 @@ public struct BottleGraphicsConfig: Codable, Equatable {
     private enum CodingKeys: String, CodingKey {
         case backend, metalFX, metalFXSpatial, gdiUpscaler, gdiUpscalerExcludedRegions, gdiUpscalerCache
         case frameGeneration, hostMemoryImport, shadowImportedHostMemory
+        case frameRateLimit
     }
 
     /// Whether games in this bottle may turn on DLSS frame generation.
@@ -230,6 +234,7 @@ public struct BottleGraphicsConfig: Codable, Equatable {
         self.shadowImportedHostMemory =
             (try? container.decodeIfPresent(Bool.self, forKey: .shadowImportedHostMemory)) ?? false
         self.hostMemoryImport = (try? container.decodeIfPresent(Bool.self, forKey: .hostMemoryImport)) ?? true
+        self.frameRateLimit = container.decodeLenientIfPresent(FrameRateLimit.self, forKey: .frameRateLimit) ?? .off
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -243,6 +248,29 @@ public struct BottleGraphicsConfig: Codable, Equatable {
         try container.encode(frameGeneration, forKey: .frameGeneration)
         try container.encode(hostMemoryImport, forKey: .hostMemoryImport)
         try container.encode(shadowImportedHostMemory, forKey: .shadowImportedHostMemory)
+        try container.encode(frameRateLimit, forKey: .frameRateLimit)
+    }
+}
+
+/// A cap on the frames per second games present.
+///
+/// Visual novels often draw as fast as they can, so a mostly still screen
+/// keeps a CPU core busy; capped, the game sleeps until the next frame is due.
+/// The managed runtime's wined3d reads `WINE_D3D_FRAME_RATE` (d3d8, d3d9,
+/// DirectDraw and its d3d10/11), and DXVK reads `DXVK_FRAME_RATE`; a runtime
+/// without the wined3d change ignores its variable.
+public enum FrameRateLimit: String, Codable, CaseIterable, Sendable {
+    case off
+    case fps30 = "30"
+    case fps60 = "60"
+
+    /// The cap in frames per second, or `nil` for no cap.
+    public var framesPerSecond: Int? {
+        switch self {
+        case .off: nil
+        case .fps30: 30
+        case .fps60: 60
+        }
     }
 }
 

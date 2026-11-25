@@ -162,6 +162,7 @@ public struct BottleInfo: Codable, Equatable {
 /// - ``dxrEnabled``
 /// - ``sequoiaCompatMode``
 /// - ``metal4Enabled``
+/// - ``frameRateLimit``
 ///
 /// ### DXVK Settings
 /// - ``dxvk``
@@ -494,6 +495,14 @@ public struct BottleSettings: Codable, Equatable {
     public var frameGeneration: Bool {
         get { graphicsConfig.frameGeneration }
         set { graphicsConfig.frameGeneration = newValue }
+    }
+
+    /// The cap on frames per second for games in this bottle.
+    ///
+    /// See ``FrameRateLimit``.
+    public var frameRateLimit: FrameRateLimit {
+        get { graphicsConfig.frameRateLimit }
+        set { graphicsConfig.frameRateLimit = newValue }
     }
 
     /// Whether 32-bit Vulkan/DXVK applications may import host memory (`VK_EXT_external_memory_host`).
@@ -1121,6 +1130,13 @@ public struct BottleSettings: Codable, Equatable {
 
         if asfTimestampBase != .auto {
             builder.set("WINE_DMO_ASF_TIMESTAMP_BASE", asfTimestampBase.rawValue, layer: .bottleManaged)
+        }
+
+        // Whichever backend draws, the cap reaches it: wined3d and DXVK each
+        // read their own variable and ignore the other one.
+        if let framesPerSecond = frameRateLimit.framesPerSecond {
+            builder.set("WINE_D3D_FRAME_RATE", String(framesPerSecond), layer: .bottleManaged)
+            builder.set("DXVK_FRAME_RATE", String(framesPerSecond), layer: .bottleManaged)
         }
 
         // Enhanced sync mode. "none" removes both variables unconditionally —

@@ -39,6 +39,20 @@ final class BottleSettingsTests: XCTestCase {
         }
     }
 
+    func testFrameRateLimitPersistenceAndDefaults() throws {
+        XCTAssertEqual(BottleSettings().frameRateLimit, .off)
+        for json in ["{}", "{\"frameRateLimit\":\"45\"}", "{\"frameRateLimit\":30}"] {
+            let config = try JSONDecoder().decode(BottleGraphicsConfig.self, from: Data(json.utf8))
+            XCTAssertEqual(config.frameRateLimit, .off)
+        }
+        for limit in FrameRateLimit.allCases {
+            var settings = BottleSettings()
+            settings.frameRateLimit = limit
+            let data = try PropertyListEncoder().encode(settings)
+            XCTAssertEqual(try PropertyListDecoder().decode(BottleSettings.self, from: data).frameRateLimit, limit)
+        }
+    }
+
     // MARK: - BottleSettings Default Values
 
     func testBottleSettingsDefaultValues() {

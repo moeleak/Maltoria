@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Bottle setting "Frame Rate Limit" (Unlimited, 30, 60), also in the settings page, sets `WINE_D3D_FRAME_RATE` and `DXVK_FRAME_RATE` so games that draw as fast as they can stop keeping a CPU core busy; the wined3d cap needs a runtime with `wined3d-frame-rate-limit.patch`.
+
 ## [0.6.2] - 2026-11-22
 
 ### Added

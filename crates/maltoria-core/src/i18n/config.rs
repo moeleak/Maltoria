@@ -35,6 +35,7 @@ pub const FIELD_TITLE_KEYS: &[(&str, &str)] = &[
     ("commandActsAsControl", "config.field.commandActsAsControl"),
     ("graphicsBackend", "config.field.graphicsBackend"),
     ("frameGeneration", "config.field.frameGeneration"),
+    ("frameRateLimit", "config.field.frameRateLimit"),
     ("hostMemoryImport", "config.field.hostMemoryImport"),
     (
         "shadowImportedHostMemory",

@@ -747,7 +747,7 @@ extension Wine {
         // Non-sensitive keys allowed in the launch summary
         let allowedKeys = [
             "DXVK_ASYNC", "DXVK_HUD", "WINEESYNC", "WINEMSYNC",
-            "D3DM_MTL4", "MTL_HUD_ENABLED", "WINED3DMETAL"
+            "D3DM_MTL4", "MTL_HUD_ENABLED", "WINED3DMETAL", "WINE_D3D_FRAME_RATE"
         ]
         let safeEntries = allowedKeys.compactMap { key -> String? in
             guard let value = environment[key] else { return nil }

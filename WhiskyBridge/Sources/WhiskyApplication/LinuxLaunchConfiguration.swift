@@ -147,6 +147,11 @@ public struct LinuxLaunchConfiguration: Sendable, Equatable {
             environment["WINE_DMO_ASF_TIMESTAMP_BASE"] = timestampBase
         }
 
+        if let frameRate = text("frameRateLimit"), ["30", "60"].contains(frameRate) {
+            environment["WINE_D3D_FRAME_RATE"] = frameRate
+            environment["DXVK_FRAME_RATE"] = frameRate
+        }
+
         // Synchronization. MSync is the macOS Mach-port primitive; on Linux
         // the supported primitives are ESync and FSync. An imported `msync`
         // value degrades to ESync, the closest Linux equivalent.

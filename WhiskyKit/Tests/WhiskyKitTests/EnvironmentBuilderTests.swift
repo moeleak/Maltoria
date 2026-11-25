@@ -34,6 +34,25 @@ final class EnvironmentBuilderTests: XCTestCase {
         }
     }
 
+    func testFrameRateLimitBottleManagedEnvironment() {
+        for limit in FrameRateLimit.allCases {
+            for backend in [GraphicsBackend.wined3d, .dxvk] {
+                var settings = BottleSettings()
+                settings.frameRateLimit = limit
+                settings.graphicsBackend = backend
+                var builder = EnvironmentBuilder()
+                _ = settings.populateBottleManagedLayer(builder: &builder)
+                let result = builder.resolve()
+                let expected = limit.framesPerSecond.map(String.init)
+                XCTAssertEqual(result.environment["WINE_D3D_FRAME_RATE"], expected)
+                XCTAssertEqual(result.environment["DXVK_FRAME_RATE"], expected)
+                if expected != nil {
+                    XCTAssertEqual(result.provenance.entries["WINE_D3D_FRAME_RATE"]?.layer, .bottleManaged)
+                }
+            }
+        }
+    }
+
     // MARK: - Layer Resolution
 
     func testEmptyBuilderResolvesToEmptyEnvironment() {
