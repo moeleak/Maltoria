@@ -142,6 +142,7 @@ pub enum Message {
     OpenTool(&'static str),
     RevealContainer,
     InstallFonts,
+    SetMetalHud(bool),
     SetAppearance(Appearance),
     SelectColor(MaterialColor),
 }
@@ -202,6 +203,9 @@ pub struct App {
     theme_settled: bool,
     appearance: segmented_button::State,
     system_dark: bool,
+    /// The library container's `metalHud` setting, once its configuration
+    /// arrived.
+    metal_hud: Option<bool>,
 }
 
 fn boot() -> (App, Task<Message>) {
@@ -265,6 +269,7 @@ fn boot() -> (App, Task<Message>) {
                 .unwrap_or(0),
         ),
         system_dark: false,
+        metal_hud: None,
         prefs,
     };
 
@@ -384,11 +389,15 @@ impl App {
 
         self.container = Some(path.clone());
         self.runtime = RuntimeTable::default();
+        self.metal_hud = None;
 
         if let Some(bridge) = &self.bridge {
             bridge.configure_runtime(&path);
             bridge.load_folders(&path);
             bridge.load_entries(&path);
+            if cfg!(target_os = "macos") {
+                bridge.load_configuration(&path);
+            }
         }
     }
 
@@ -921,6 +930,12 @@ fn update(app: &mut App, message: Message) -> Task<Message> {
             });
             app.notify(s().app.installing_fonts);
         }
+        Message::SetMetalHud(enabled) => {
+            app.metal_hud = Some(enabled);
+            app.with_container(|bridge, container| {
+                bridge.set_configuration(container, "metalHud", serde_json::Value::Bool(enabled));
+            });
+        }
         Message::SetAppearance(appearance) => {
             let index = Appearance::ALL
                 .iter()
@@ -1256,6 +1271,31 @@ fn bridge_event(app: &mut App, event: BridgeEvent) -> Task<Message> {
                 bridge.reload_library();
             }
         }
+        BridgeEvent::Configuration {
+            container, values, ..
+        }
+        | BridgeEvent::ConfigurationSaved {
+            container, values, ..
+        } => {
+            if app.container.as_deref() == Some(container.as_str()) {
+                app.metal_hud = values.get("metalHud").and_then(serde_json::Value::as_bool);
+            }
+        }
+        BridgeEvent::ConfigurationFailed {
+            container,
+            field,
+            reason,
+        } => {
+            // A refused change leaves the switch showing it: read the file
+            // back so it shows what is saved.
+            if field.is_some()
+                && app.container.as_deref() == Some(container.as_str())
+                && let Some(bridge) = &app.bridge
+            {
+                bridge.load_configuration(&container);
+            }
+            app.notify(reason);
+        }
         BridgeEvent::ActionFailed { reason }
         | BridgeEvent::RuntimeFailed { reason, .. }
         | BridgeEvent::LoadFailed { reason, .. }
@@ -1481,6 +1521,7 @@ fn view(app: &App) -> material::Element<'_, Message> {
             setup: app.setup.as_ref(),
             install: app.install.as_ref(),
             container: app.container(),
+            metal_hud: app.metal_hud,
             color: app.theme.selected_color(),
             appearance: &app.appearance,
         }),

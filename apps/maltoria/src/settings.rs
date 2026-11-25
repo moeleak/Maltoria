@@ -9,7 +9,7 @@ use maltoria_core::bridge::dto::{Container, SetupStatusDto};
 use maltoria_core::i18n::s;
 use material::widget::button::{self, ButtonVariant};
 use material::widget::theme_picker::MaterialColor;
-use material::widget::{page, progress_bar, segmented_button};
+use material::widget::{page, progress_bar, segmented_button, toggler};
 use material::{Theme, tokens};
 use material_ui_rs as material;
 
@@ -64,6 +64,9 @@ pub struct View<'a> {
     pub setup: Option<&'a SetupStatusDto>,
     pub install: Option<&'a Install>,
     pub container: Option<&'a Container>,
+    /// The container's Metal HUD setting, once its configuration arrived;
+    /// `None` also where the platform has no Metal.
+    pub metal_hud: Option<bool>,
     pub color: MaterialColor,
     /// The appearance's segmented button, whose selection animates.
     pub appearance: &'a segmented_button::State,
@@ -78,7 +81,11 @@ pub fn view(settings: View<'_>) -> material::Element<'_, Message> {
             runtime(settings.setup, settings.install),
         )
         .into(),
-        page::section(app.container_section, container_section(settings.container)).into(),
+        page::section(
+            app.container_section,
+            container_section(settings.container, settings.metal_hud),
+        )
+        .into(),
     ];
 
     sections.push(
@@ -186,7 +193,10 @@ fn runtime<'a>(
         .into()
 }
 
-fn container_section(current: Option<&Container>) -> material::Element<'_, Message> {
+fn container_section(
+    current: Option<&Container>,
+    metal_hud: Option<bool>,
+) -> material::Element<'_, Message> {
     let app = &s().app;
 
     let Some(current) = current else {
@@ -197,7 +207,7 @@ fn container_section(current: Option<&Container>) -> material::Element<'_, Messa
         button::button(label, ButtonVariant::Outlined).on_press(Message::OpenTool(tool))
     };
 
-    Column::new()
+    let mut section = Column::new()
         .push(row(
             current.name.as_str(),
             maltoria_core::create_bottle::display_bottle_location(&current.path),
@@ -216,8 +226,17 @@ fn container_section(current: Option<&Container>) -> material::Element<'_, Messa
                 .spacing(8)
                 .wrap(),
         )
-        .spacing(16)
-        .into()
+        .spacing(16);
+
+    if let Some(enabled) = metal_hud {
+        section = section.push(row(
+            maltoria_core::i18n::config::field_title("", "metalHud", "Metal HUD"),
+            app.metal_hud_detail,
+            toggler::control(enabled).on_toggle(Message::SetMetalHud),
+        ));
+    }
+
+    section.into()
 }
 
 fn appearance(
