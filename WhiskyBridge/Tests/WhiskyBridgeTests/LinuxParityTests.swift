@@ -39,18 +39,6 @@ import WhiskyCore
     #expect(config.environment["WINE_DMO_ASF_TIMESTAMP_BASE"] == "legacy")
 }
 
-@Test func frameRateLimitEnvironment() {
-    for limit in [nil, "off", "30", "60", "45"] as [String?] {
-        let values: [String: ConfigurationValue] = limit.map { ["frameRateLimit": .text($0)] } ?? [:]
-        let config = LinuxLaunchConfiguration.compose(
-            values: values, bottleEnvironment: [:], bottleDLLOverrides: [], program: [:]
-        )
-        let expected = limit == "30" || limit == "60" ? limit : nil
-        #expect(config.environment["WINE_D3D_FRAME_RATE"] == expected)
-        #expect(config.environment["DXVK_FRAME_RATE"] == expected)
-    }
-}
-
 private struct ParityFixture {
     let root: URL
     let runtime: URL

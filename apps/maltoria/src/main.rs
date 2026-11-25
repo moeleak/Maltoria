@@ -207,8 +207,8 @@ pub struct App {
     /// The library container's `metalHud` setting, once its configuration
     /// arrived.
     metal_hud: Option<bool>,
-    /// The library container's `frameRateLimit` setting, once its
-    /// configuration arrived.
+    /// The library container's frame rate cap, once its environment
+    /// arrived.
     frame_rate_limit: Option<FrameRateLimit>,
     frame_rate: segmented_button::State,
 }
@@ -405,6 +405,7 @@ impl App {
             bridge.load_folders(&path);
             bridge.load_entries(&path);
             bridge.load_configuration(&path);
+            bridge.load_environment(&path);
         }
     }
 
@@ -948,11 +949,9 @@ fn update(app: &mut App, message: Message) -> Task<Message> {
             app.frame_rate_limit = Some(limit);
             app.frame_rate.select(limit.index(), Instant::now());
             app.with_container(|bridge, container| {
-                bridge.set_configuration(
-                    container,
-                    "frameRateLimit",
-                    serde_json::Value::String(limit.wire().to_owned()),
-                );
+                for key in FrameRateLimit::ENVIRONMENT {
+                    bridge.set_environment(container, key, limit.environment(), None);
+                }
             });
         }
         Message::SetAppearance(appearance) => {
@@ -1298,16 +1297,26 @@ fn bridge_event(app: &mut App, event: BridgeEvent) -> Task<Message> {
         } => {
             if app.container.as_deref() == Some(container.as_str()) {
                 app.metal_hud = values.get("metalHud").and_then(serde_json::Value::as_bool);
-                app.frame_rate_limit = values
-                    .get("frameRateLimit")
-                    .and_then(serde_json::Value::as_str)
-                    .and_then(FrameRateLimit::from_wire);
+            }
+        }
+        BridgeEvent::Environment { container, values } => {
+            if app.container.as_deref() == Some(container.as_str()) {
+                app.frame_rate_limit = FrameRateLimit::from_environment(&values);
                 if let Some(limit) = app.frame_rate_limit
                     && app.frame_rate.selected_index() != limit.index()
                 {
                     app.frame_rate = segmented_button::State::new(limit.index());
                 }
             }
+        }
+        BridgeEvent::EnvironmentFailed { container, reason } => {
+            // Read the variables back, so the switch shows what is saved.
+            if app.container.as_deref() == Some(container.as_str())
+                && let Some(bridge) = &app.bridge
+            {
+                bridge.load_environment(&container);
+            }
+            app.notify(reason);
         }
         BridgeEvent::ConfigurationFailed {
             container,

@@ -426,7 +426,7 @@ pub fn section_for(field_id: &str) -> &'static SectionSpec {
         "discordPresence" | "discordBridge" => "discord",
         "virtualDesktopEnabled" | "resolutionPreset" | "customResolutionWidth"
         | "customResolutionHeight" => "display",
-        "shaderCacheEnabled" | "disableAppNap" | "frameRateLimit" => "performance",
+        "shaderCacheEnabled" | "disableAppNap" => "performance",
         "clipboardPolicy" | "clipboardThreshold" | "killOnQuit" => "cleanup",
         "programLocale" | "arguments" => "program",
         _ => return OTHER,

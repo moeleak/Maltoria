@@ -3,6 +3,8 @@
 //! Only what a visual novel needs is here; the container's Wine tools cover
 //! the rest.
 
+use std::collections::BTreeMap;
+
 use iced::widget::{Column, Row, Space, button as iced_button, container};
 use iced::{Alignment, Length};
 use maltoria_core::bridge::dto::{Container, SetupStatusDto};
@@ -59,7 +61,9 @@ impl Appearance {
     }
 }
 
-/// The container's cap on frames per second, as its `frameRateLimit` stores it.
+/// The container's cap on frames per second, kept in its environment
+/// variables, which every bridge applies to the games it launches: wined3d
+/// reads `WINE_D3D_FRAME_RATE`, DXVK `DXVK_FRAME_RATE`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FrameRateLimit {
     Off,
@@ -70,17 +74,33 @@ pub enum FrameRateLimit {
 impl FrameRateLimit {
     pub const ALL: [Self; 3] = [Self::Off, Self::Fps30, Self::Fps60];
 
-    /// The value the configuration stores.
-    pub fn wire(self) -> &'static str {
+    pub const ENVIRONMENT: [&'static str; 2] = ["WINE_D3D_FRAME_RATE", "DXVK_FRAME_RATE"];
+
+    /// The variables' value; none removes them.
+    pub fn environment(self) -> Option<&'static str> {
+        match self {
+            Self::Off => None,
+            Self::Fps30 => Some("30"),
+            Self::Fps60 => Some("60"),
+        }
+    }
+
+    /// The cap the container's variables set, if this interface has a
+    /// segment for it.
+    pub fn from_environment(values: &BTreeMap<String, String>) -> Option<Self> {
+        let value = values.get(Self::ENVIRONMENT[0]).map(String::as_str);
+        Self::ALL
+            .into_iter()
+            .find(|limit| limit.environment() == value)
+    }
+
+    /// The key of its label.
+    fn wire(self) -> &'static str {
         match self {
             Self::Off => "off",
             Self::Fps30 => "30",
             Self::Fps60 => "60",
         }
-    }
-
-    pub fn from_wire(value: &str) -> Option<Self> {
-        Self::ALL.into_iter().find(|limit| limit.wire() == value)
     }
 
     pub fn index(self) -> usize {
@@ -407,11 +427,16 @@ mod tests {
     #[test]
     fn frame_rate_limit_reads_back_what_it_stores() {
         for (index, limit) in FrameRateLimit::ALL.into_iter().enumerate() {
-            assert_eq!(FrameRateLimit::from_wire(limit.wire()), Some(limit));
+            let values = FrameRateLimit::ENVIRONMENT
+                .iter()
+                .filter_map(|key| Some((key.to_string(), limit.environment()?.to_owned())))
+                .collect();
+            assert_eq!(FrameRateLimit::from_environment(&values), Some(limit));
             assert_eq!(limit.index(), index);
         }
 
         // A value this interface has no segment for is not shown as one.
-        assert_eq!(FrameRateLimit::from_wire("45"), None);
+        let values = [("WINE_D3D_FRAME_RATE".to_owned(), "45".to_owned())].into();
+        assert_eq!(FrameRateLimit::from_environment(&values), None);
     }
 }
