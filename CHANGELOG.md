@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- "Graphics Backend" (Recommended, DXVK, D3DMetal, WineD3D) in the settings page; backends the container's Wine engine cannot run are disabled. The Metal HUD's note says it is not shown over games WineD3D draws with OpenGL.
 - "Frame Rate Limit" (Unlimited, 30, 60) in the settings page sets the container's `WINE_D3D_FRAME_RATE` and `DXVK_FRAME_RATE` environment variables, so games that draw as fast as they can stop keeping a CPU core busy; the wined3d cap needs a runtime with `wined3d-frame-rate-limit.patch`.
 
 ## [0.6.2] - 2026-11-22

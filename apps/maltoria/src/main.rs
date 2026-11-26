@@ -19,7 +19,7 @@ mod removal;
 mod settings;
 mod wine;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::sync::Arc;
 
 use iced::time::Instant;
@@ -42,7 +42,7 @@ use material_ui_rs as material;
 
 use crate::container::Choice;
 use crate::prefs::Prefs;
-use crate::settings::{Appearance, FrameRateLimit};
+use crate::settings::{Appearance, FrameRateLimit, GraphicsBackend};
 
 const WINDOW_SIZE: Size = Size::new(1280.0, 840.0);
 const MIN_WINDOW_SIZE: Size = Size::new(720.0, 560.0);
@@ -144,6 +144,7 @@ pub enum Message {
     InstallFonts,
     SetMetalHud(bool),
     SetFrameRateLimit(FrameRateLimit),
+    SetGraphicsBackend(GraphicsBackend),
     SetAppearance(Appearance),
     SelectColor(MaterialColor),
 }
@@ -211,6 +212,12 @@ pub struct App {
     /// arrived.
     frame_rate_limit: Option<FrameRateLimit>,
     frame_rate: segmented_button::State,
+    /// The library container's `graphicsBackend`, once its configuration
+    /// arrived.
+    graphics_backend: Option<String>,
+    backend: segmented_button::State,
+    /// The backends its Wine engine's policy disables.
+    blocked_backends: BTreeSet<String>,
 }
 
 fn boot() -> (App, Task<Message>) {
@@ -277,6 +284,9 @@ fn boot() -> (App, Task<Message>) {
         metal_hud: None,
         frame_rate_limit: None,
         frame_rate: segmented_button::State::new(0),
+        graphics_backend: None,
+        backend: segmented_button::State::new(0),
+        blocked_backends: BTreeSet::new(),
         prefs,
     };
 
@@ -322,6 +332,7 @@ fn subscription(app: &App) -> Subscription<Message> {
         || app.removing_transition.is_animating()
         || app.appearance.is_animating()
         || app.frame_rate.is_animating()
+        || app.backend.is_animating()
         || app.library.syncing.is_some()
     {
         subscriptions.push(iced::window::frames().map(Message::Frame));
@@ -399,6 +410,8 @@ impl App {
         self.runtime = RuntimeTable::default();
         self.metal_hud = None;
         self.frame_rate_limit = None;
+        self.graphics_backend = None;
+        self.blocked_backends.clear();
 
         if let Some(bridge) = &self.bridge {
             bridge.configure_runtime(&path);
@@ -406,6 +419,7 @@ impl App {
             bridge.load_entries(&path);
             bridge.load_configuration(&path);
             bridge.load_environment(&path);
+            bridge.load_engine_selection(&path);
         }
     }
 
@@ -624,6 +638,7 @@ fn update(app: &mut App, message: Message) -> Task<Message> {
             }
             let _ = app.appearance.advance(now);
             let _ = app.frame_rate.advance(now);
+            let _ = app.backend.advance(now);
 
             if let Some(syncing) = &mut app.library.syncing
                 && !syncing.advance(now)
@@ -943,6 +958,17 @@ fn update(app: &mut App, message: Message) -> Task<Message> {
             app.metal_hud = Some(enabled);
             app.with_container(|bridge, container| {
                 bridge.set_configuration(container, "metalHud", serde_json::Value::Bool(enabled));
+            });
+        }
+        Message::SetGraphicsBackend(backend) => {
+            app.graphics_backend = Some(backend.wire().to_owned());
+            app.backend.select(backend as usize, Instant::now());
+            app.with_container(|bridge, container| {
+                bridge.set_configuration(
+                    container,
+                    "graphicsBackend",
+                    serde_json::Value::String(backend.wire().to_owned()),
+                );
             });
         }
         Message::SetFrameRateLimit(limit) => {
@@ -1297,6 +1323,35 @@ fn bridge_event(app: &mut App, event: BridgeEvent) -> Task<Message> {
         } => {
             if app.container.as_deref() == Some(container.as_str()) {
                 app.metal_hud = values.get("metalHud").and_then(serde_json::Value::as_bool);
+                app.graphics_backend = values
+                    .get("graphicsBackend")
+                    .and_then(serde_json::Value::as_str)
+                    .map(str::to_owned);
+                if let Some(backend) = &app.graphics_backend {
+                    let index = GraphicsBackend::index_of(backend);
+                    if app.backend.selected_index() != index {
+                        app.backend = segmented_button::State::new(index);
+                    }
+                }
+            }
+        }
+        BridgeEvent::EngineSelection {
+            container,
+            selection,
+        } => {
+            if app.container.as_deref() == Some(container.as_str()) {
+                app.blocked_backends = selection
+                    .field_policy
+                    .get("graphicsBackend")
+                    .map(|policy| {
+                        policy
+                            .choices
+                            .iter()
+                            .filter(|(_, choice)| choice.disabled)
+                            .map(|(backend, _)| backend.clone())
+                            .collect()
+                    })
+                    .unwrap_or_default();
             }
         }
         BridgeEvent::Environment { container, values } => {
@@ -1561,6 +1616,8 @@ fn view(app: &App) -> material::Element<'_, Message> {
             metal_hud: app.metal_hud,
             frame_rate_limit: app.frame_rate_limit,
             frame_rate: &app.frame_rate,
+            graphics_backend: app.graphics_backend.as_ref().map(|_| &app.backend),
+            blocked_backends: &app.blocked_backends,
             color: app.theme.selected_color(),
             appearance: &app.appearance,
         }),

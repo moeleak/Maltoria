@@ -3,7 +3,7 @@
 //! Only what a visual novel needs is here; the container's Wine tools cover
 //! the rest.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use iced::widget::{Column, Row, Space, button as iced_button, container};
 use iced::{Alignment, Length};
@@ -120,6 +120,43 @@ impl FrameRateLimit {
     }
 }
 
+/// The container's Direct3D translation, as its `graphicsBackend` stores it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GraphicsBackend {
+    Recommended,
+    Dxvk,
+    D3dMetal,
+    Wined3d,
+}
+
+impl GraphicsBackend {
+    pub const ALL: [Self; 4] = [Self::Recommended, Self::Dxvk, Self::D3dMetal, Self::Wined3d];
+
+    /// The value the configuration stores.
+    pub fn wire(self) -> &'static str {
+        match self {
+            Self::Recommended => "recommended",
+            Self::Dxvk => "dxvk",
+            Self::D3dMetal => "d3dMetal",
+            Self::Wined3d => "wined3d",
+        }
+    }
+
+    /// The segment a stored value selects; past the last segment, so none is
+    /// selected, for a backend this page has no segment for, like DXMT.
+    pub fn index_of(value: &str) -> usize {
+        Self::ALL
+            .iter()
+            .position(|backend| backend.wire() == value)
+            .unwrap_or(Self::ALL.len())
+    }
+
+    /// D3DMetal is Apple's, and the bridge offers it on macOS only.
+    fn on_this_platform(self) -> bool {
+        self != Self::D3dMetal || cfg!(target_os = "macos")
+    }
+}
+
 /// What the settings page shows.
 pub struct View<'a> {
     pub setup: Option<&'a SetupStatusDto>,
@@ -133,6 +170,12 @@ pub struct View<'a> {
     pub frame_rate_limit: Option<FrameRateLimit>,
     /// The frame rate limit's segmented button, whose selection animates.
     pub frame_rate: &'a segmented_button::State,
+    /// The graphics backend's segmented button, once the container's
+    /// configuration arrived.
+    pub graphics_backend: Option<&'a segmented_button::State>,
+    /// Backends the container's Wine engine cannot run, as the engine's
+    /// policy names them.
+    pub blocked_backends: &'a BTreeSet<String>,
     pub color: MaterialColor,
     /// The appearance's segmented button, whose selection animates.
     pub appearance: &'a segmented_button::State,
@@ -153,6 +196,9 @@ pub fn view(settings: View<'_>) -> material::Element<'_, Message> {
                 settings.container,
                 settings.metal_hud,
                 settings.frame_rate_limit.map(|_| settings.frame_rate),
+                settings
+                    .graphics_backend
+                    .map(|state| (state, settings.blocked_backends)),
             ),
         )
         .into(),
@@ -267,6 +313,7 @@ fn container_section<'a>(
     current: Option<&'a Container>,
     metal_hud: Option<bool>,
     frame_rate: Option<&segmented_button::State>,
+    graphics_backend: Option<(&segmented_button::State, &BTreeSet<String>)>,
 ) -> material::Element<'a, Message> {
     let app = &s().app;
 
@@ -298,6 +345,31 @@ fn container_section<'a>(
                 .wrap(),
         )
         .spacing(16);
+
+    if let Some((state, blocked)) = graphics_backend {
+        let backends: Vec<_> = GraphicsBackend::ALL
+            .into_iter()
+            .filter(|backend| backend.on_this_platform())
+            .collect();
+        let len = backends.len();
+        let segments = backends.into_iter().enumerate().map(|(position, backend)| {
+            let index = backend as usize;
+            segmented_button::animated_selectable_label(
+                maltoria_core::program_settings::graphics_label(backend.wire()),
+                state.progress_for(index),
+                segmented_button::SegmentPosition::for_index(position, len),
+            )
+            .on_press_maybe(
+                (!blocked.contains(backend.wire())).then_some(Message::SetGraphicsBackend(backend)),
+            )
+            .into()
+        });
+        section = section.push(row(
+            maltoria_core::i18n::config::field_title("", "graphicsBackend", "Graphics Backend"),
+            app.graphics_backend_detail,
+            segmented_button::group(segments),
+        ));
+    }
 
     if let Some(enabled) = metal_hud {
         section = section.push(row(
@@ -422,6 +494,20 @@ mod tests {
         }
 
         assert_eq!(Appearance::from_dark_mode(None), Appearance::System);
+    }
+
+    #[test]
+    fn graphics_backend_selects_the_segment_it_stores() {
+        for (index, backend) in GraphicsBackend::ALL.into_iter().enumerate() {
+            assert_eq!(GraphicsBackend::index_of(backend.wire()), index);
+            assert_eq!(backend as usize, index);
+        }
+
+        // DXMT has no segment, so none is selected.
+        assert_eq!(
+            GraphicsBackend::index_of("dxmt"),
+            GraphicsBackend::ALL.len()
+        );
     }
 
     #[test]
